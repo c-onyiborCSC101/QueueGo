@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: queuego
+    runtime: node
+    rootDir: backend
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    plan: free
+    envVars:
+      - key: NODE_VERSION
+        value: "20"
+      - key: SMS_PROVIDER
+        value: console
+      - key: ADMIN_OPEN_REGISTRATION
+        value: "true"
+      - key: MAX_BATCH_SIZE
+        value: "4"
+      - key: WAIT_THRESHOLD_MINUTES
+        value: "5"

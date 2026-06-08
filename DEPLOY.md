@@ -1,4 +1,4 @@
-# Deploying PAU Smart Keke System
+# Deploying QueueGo
 
 ## Local run
 
@@ -30,12 +30,14 @@ Open:
 2. Create **Web Service** on [Render](https://render.com).
 3. Settings:
    - **Root directory:** `backend`
-   - **Build command:** `npm install`
+   - **Build command:** `npm install && npm run build`
    - **Start command:** `npm start`
+   - **Node version:** `20` (or set env `NODE_VERSION=20`) — avoids sqlite3 GLIBC errors on Render
 4. Environment variables:
    - `ADMIN_PASSWORD` — your admin password
    - `JWT_SECRET` — long random string
-   - `SMS_PROVIDER` — `termii` for live SMS (see `SMS_SETUP.md`)
+   - `SMS_PROVIDER` — `console` for demo (no SMS cost) or `termii` for live SMS (see `SMS_SETUP.md`)
+   - `PUBLIC_URL` — e.g. `https://queuego.onrender.com` (for links in SMS/logs)
    - `TERMII_API_KEY` / `TERMII_SENDER_ID` — if using Termii
    - `PORT` — `3000` (Render sets this automatically)
 5. Add a **persistent disk** mounted at `/opt/render/project/src/backend` so `database.db` survives restarts (optional but recommended).
