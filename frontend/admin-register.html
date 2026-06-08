@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Staff registration — QueueGo</title>
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body class="theme-admin auth-body staff-register-page">
+
+    <header class="app-topbar app-topbar--dark">
+        <a href="/" class="app-brand app-brand--light">
+            <span class="app-brand-mark">🛺</span>
+            <span class="app-brand-text">QueueGo</span>
+        </a>
+        <a href="/staff" class="app-topbar-link app-topbar-link--light">← Staff sign in</a>
+    </header>
+
+    <main class="auth-page staff-register-main">
+        <div class="auth-split staff-register-split">
+            <aside class="auth-hero auth-hero--admin staff-register-hero">
+                <div class="staff-register-hero-bg" aria-hidden="true"></div>
+                <div class="auth-hero-inner staff-register-hero-inner">
+                    <div class="staff-register-hero-icon" aria-hidden="true">📊</div>
+                    <span class="portal-badge portal-badge--admin">Operations team</span>
+                    <span id="setupStatusBadge" class="setup-status-badge">Checking access…</span>
+                    <h1>Join the control room</h1>
+                    <p id="registerIntro" class="auth-hero-text">Loading registration options…</p>
+
+                    <div class="staff-feature-grid">
+                        <div class="staff-feature-card">
+                            <span class="staff-feature-icon">📡</span>
+                            <strong>Live dispatch</strong>
+                            <span>Watch queues and drivers update in real time</span>
+                        </div>
+                        <div class="staff-feature-card">
+                            <span class="staff-feature-icon">🛺</span>
+                            <strong>Driver onboarding</strong>
+                            <span>Register keke operators and send PINs by SMS</span>
+                        </div>
+                        <div class="staff-feature-card">
+                            <span class="staff-feature-icon">🛡️</span>
+                            <strong>Fleet override</strong>
+                            <span>Reassign, complete, or reject rides when needed</span>
+                        </div>
+                    </div>
+                </div>
+            </aside>
+
+            <div class="auth-form-panel staff-register-panel">
+                <div class="auth-form-card auth-form-card--admin staff-register-card">
+                    <div class="staff-register-card-header">
+                        <div class="staff-register-card-icon" aria-hidden="true">🔐</div>
+                        <div>
+                            <p class="staff-register-step">Step 1 of 1 · Account setup</p>
+                            <h2>Create your staff account</h2>
+                        </div>
+                    </div>
+                    <p class="auth-form-lead">Use your campus work email. After this you'll sign in at <code class="inline-code">/staff</code>.</p>
+
+                    <div id="closedRegistration" class="staff-closed-state" hidden>
+                        <div class="staff-closed-icon" aria-hidden="true">🔒</div>
+                        <p class="empty-state-title">Registration is closed</p>
+                        <p class="empty-state-text">Ask an existing admin to add your account from the control room, or get an invite code from your team lead.</p>
+                        <a href="/staff" class="btn-primary btn-primary--block">Go to staff sign in</a>
+                    </div>
+
+                    <form id="adminRegisterForm" class="auth-form staff-register-form" action="#" method="post" novalidate>
+                        <div class="form-field">
+                            <label for="adminRegisterName">Full name</label>
+                            <div class="input-wrap">
+                                <span class="input-icon" aria-hidden="true">👤</span>
+                                <input type="text" id="adminRegisterName" placeholder="e.g. Ada Okonkwo" required autocomplete="name">
+                            </div>
+                        </div>
+                        <div class="form-field">
+                            <label for="adminRegisterEmail">Work email</label>
+                            <div class="input-wrap">
+                                <span class="input-icon" aria-hidden="true">✉️</span>
+                                <input type="email" id="adminRegisterEmail" placeholder="you@pau.edu.ng" required autocomplete="email">
+                            </div>
+                        </div>
+                        <div class="form-field">
+                            <label for="adminRegisterPassword">Password</label>
+                            <div class="input-wrap">
+                                <span class="input-icon" aria-hidden="true">🔑</span>
+                                <input type="password" id="adminRegisterPassword" placeholder="At least 6 characters" required minlength="6" autocomplete="new-password">
+                            </div>
+                            <ul class="password-hints">
+                                <li>Minimum 6 characters</li>
+                                <li>Keep it private — only operations staff should have access</li>
+                            </ul>
+                        </div>
+                        <div id="inviteCodeField" class="invite-code-box" hidden>
+                            <div class="invite-code-box-header">
+                                <span aria-hidden="true">🎟️</span>
+                                <strong>Staff invite required</strong>
+                            </div>
+                            <p class="invite-code-box-text">Enter the code shared by your team lead to complete registration.</p>
+                            <div class="form-field">
+                                <label for="adminInviteCode">Invite code</label>
+                                <input type="text" id="adminInviteCode" class="invite-code-input" placeholder="Paste your invite code" autocomplete="off">
+                            </div>
+                        </div>
+                        <button type="submit" id="adminRegisterBtn" class="btn-primary btn-primary--staff">
+                            <span class="btn-text">Create staff account</span>
+                            <span class="btn-arrow" aria-hidden="true">→</span>
+                        </button>
+                    </form>
+
+                    <p id="adminRegisterMessage" class="auth-message"></p>
+
+                    <div class="staff-register-trust">
+                        <span aria-hidden="true">🛡️</span>
+                        <p>Staff accounts are for authorized campus operations personnel only.</p>
+                    </div>
+
+                    <p class="auth-footer">
+                        Already have an account?
+                        <a href="/staff">Sign in instead</a>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="/app-shared.js"></script>
+    <script src="/admin-register.js"></script>
+
+</body>
+</html>

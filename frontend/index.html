@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Passenger — QueueGo</title>
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body class="theme-passenger auth-body" id="passengerBody">
+
+    <header class="app-topbar app-topbar--light" id="passengerTopbar">
+        <a href="/" class="app-brand">
+            <span class="app-brand-mark">🛺</span>
+            <span class="app-brand-text">QueueGo</span>
+        </a>
+        <a href="/" class="app-topbar-link">← Home</a>
+    </header>
+
+    <main class="auth-page" id="passengerAuthMain">
+        <div class="auth-split auth-split--narrow-hero">
+            <aside class="auth-hero auth-hero--passenger">
+                <div class="auth-hero-inner">
+                    <span class="portal-badge">Passenger</span>
+                    <h1>Book your campus ride</h1>
+                    <p class="auth-hero-text">Sign in to request a keke, watch dispatch assign a driver, and track pickup live.</p>
+                </div>
+            </aside>
+            <div class="auth-form-panel">
+                <div class="auth-form-card auth-form-card--passenger">
+                    <section id="authSection">
+                        <h2>Welcome back</h2>
+                        <p class="auth-form-lead">Sign in with the email you registered with.</p>
+                        <form id="loginForm" class="auth-form" action="#" method="post" novalidate>
+                            <div class="form-field">
+                                <label for="loginEmail">Email</label>
+                                <input type="email" id="loginEmail" placeholder="student@pau.edu.ng" required autocomplete="email">
+                            </div>
+                            <div class="form-field">
+                                <label for="loginPassword">Password</label>
+                                <input type="password" id="loginPassword" placeholder="Your password" required autocomplete="current-password">
+                            </div>
+                            <button type="submit" class="btn-primary">Log in</button>
+                        </form>
+                        <p id="authMessage" class="auth-message"></p>
+                        <p class="auth-footer">New here? <a href="/passenger/register">Create a passenger account</a></p>
+                    </section>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <main class="app-main app-main--passenger" id="appSection" hidden aria-hidden="true">
+        <div class="app-container app-container--passenger">
+            <div class="app-page-header">
+                <div>
+                    <p class="welcome-label">Your ride dashboard</p>
+                    <h1 id="welcomeName">Passenger</h1>
+                    <p id="welcomeEmail" class="welcome-email"></p>
+                </div>
+                <button type="button" id="logoutBtn" class="btn-secondary btn-secondary--sm">Log out</button>
+            </div>
+            <div class="passenger-grid">
+                <section class="panel-card panel-card--passenger">
+                    <h2>Request a ride</h2>
+                    <p class="panel-lead">Select where you are now and where you want to go on campus.</p>
+                    <form id="rideForm" class="auth-form" action="#" method="post" novalidate>
+                        <div class="form-field">
+                            <label for="location">Pickup location</label>
+                            <select id="location" required></select>
+                        </div>
+                        <div class="form-field">
+                            <label for="destination">Destination</label>
+                            <select id="destination" required></select>
+                        </div>
+                        <button type="submit" class="btn-primary">Request ride</button>
+                    </form>
+                </section>
+                <section class="panel-card panel-card--passenger">
+                    <div class="panel-card-header">
+                        <h2>Live ride status</h2>
+                        <span class="live-badge">● Live</span>
+                    </div>
+                    <div id="messageBox">
+                        <p id="statusMessage" class="status-message empty-state-inline" hidden></p>
+                        <div id="rideStatusCard" class="ride-status-card" hidden>
+                            <h3 id="statusTitle">Your Live Ride</h3>
+                            <p id="statusHint" class="ride-status-hint">Your ride request is being monitored in real time.</p>
+                            <dl class="ride-status-details">
+                                <dt>Passenger</dt><dd id="statusName">—</dd>
+                                <dt>Pickup</dt><dd id="statusLocation">—</dd>
+                                <dt>Destination</dt><dd id="statusDestination">—</dd>
+                                <dt>Status</dt><dd><span id="statusValue" class="status-chip status-waiting">WAITING FOR DRIVER</span></dd>
+                            </dl>
+                            <dl id="driverInfoBlock" class="ride-status-details ride-status-driver" hidden>
+                                <dt>Driver</dt><dd id="statusDriverName">—</dd>
+                                <dt>Phone</dt><dd id="statusDriverPhone">—</dd>
+                            </dl>
+                        </div>
+                        <p id="noRideHint" class="empty-state-inline">No active ride. Request one from the panel on the left.</p>
+                    </div>
+                </section>
+            </div>
+            <section class="panel-card panel-card--passenger panel-card--full">
+                <h2>Your recent rides</h2>
+                <div id="rideHistory" class="list-panel"></div>
+            </section>
+        </div>
+    </main>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="/campus-locations.js"></script>
+    <script src="/app-shared.js"></script>
+    <script src="/passenger.js"></script>
+</body>
+</html>

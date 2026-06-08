@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create account — QueueGo</title>
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body class="theme-passenger auth-body">
+
+    <header class="app-topbar app-topbar--light">
+        <a href="/" class="app-brand">
+            <span class="app-brand-mark">🛺</span>
+            <span class="app-brand-text">QueueGo</span>
+        </a>
+        <a href="/passenger" class="app-topbar-link">Passenger sign in</a>
+    </header>
+
+    <main class="auth-page">
+        <div class="auth-split">
+            <aside class="auth-hero auth-hero--passenger">
+                <div class="auth-hero-inner">
+                    <span class="portal-badge">Passenger</span>
+                    <h1>Join QueueGo</h1>
+                    <p class="auth-hero-text">One account for all your campus keke bookings — request rides, track drivers, and view your history.</p>
+                    <ul class="auth-hero-list">
+                        <li>Pick from every major campus pickup point</li>
+                        <li>Live status updates while your driver is assigned</li>
+                        <li>Ride history saved to your account</li>
+                    </ul>
+                </div>
+            </aside>
+
+            <div class="auth-form-panel">
+                <div class="auth-form-card auth-form-card--passenger">
+                    <h2>Create your account</h2>
+                    <p class="auth-form-lead">Takes less than a minute. You'll sign in right after.</p>
+
+                    <form id="registerForm" class="auth-form" action="#" method="post" novalidate>
+                        <div class="form-field">
+                            <label for="registerName">Full name</label>
+                            <input type="text" id="registerName" placeholder="Your name" required autocomplete="name">
+                        </div>
+                        <div class="form-field">
+                            <label for="registerEmail">Email address</label>
+                            <input type="email" id="registerEmail" placeholder="student@pau.edu.ng" required autocomplete="email">
+                        </div>
+                        <div class="form-field">
+                            <label for="registerPhone">Phone <span class="label-optional">(optional)</span></label>
+                            <input type="tel" id="registerPhone" placeholder="08012345678" autocomplete="tel">
+                        </div>
+                        <div class="form-field">
+                            <label for="registerPassword">Password</label>
+                            <input type="password" id="registerPassword" placeholder="At least 4 characters" required minlength="4" autocomplete="new-password">
+                        </div>
+                        <button type="submit" id="registerSubmitBtn" class="btn-primary">Create account</button>
+                    </form>
+
+                    <p id="registerMessage" class="auth-message"></p>
+
+                    <p class="auth-footer">
+                        Already registered?
+                        <a href="/passenger">Sign in instead</a>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="/app-shared.js"></script>
+    <script src="/register.js"></script>
+
+</body>
+</html>

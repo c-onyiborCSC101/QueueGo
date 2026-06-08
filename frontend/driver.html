@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Driver — QueueGo</title>
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body class="theme-driver auth-body" id="driverBody">
+
+    <header class="app-topbar app-topbar--light">
+        <a href="/" class="app-brand">
+            <span class="app-brand-mark">🛺</span>
+            <span class="app-brand-text">QueueGo</span>
+        </a>
+        <a href="/" class="app-topbar-link">← Home</a>
+    </header>
+
+    <main class="auth-page" id="driverAuthMain">
+        <div class="auth-split auth-split--narrow-hero">
+            <aside class="auth-hero auth-hero--driver">
+                <div class="auth-hero-inner">
+                    <span class="portal-badge">Driver</span>
+                    <h1>Driver workspace</h1>
+                    <p class="auth-hero-text">See your optimized route, pick up multiple passengers, and drop each at their destination.</p>
+                    <ul class="auth-hero-list">
+                        <li>Operations registers you and shares your PIN</li>
+                        <li>New passengers join your batch when you have room</li>
+                        <li>Follow the suggested pickup and drop-off order</li>
+                    </ul>
+                </div>
+            </aside>
+            <div class="auth-form-panel">
+                <div class="auth-form-card auth-form-card--driver">
+                    <section id="driverLoginSection">
+                        <h2>Sign in</h2>
+                        <p class="auth-form-lead">Select your name and enter the PIN campus operations gave you.</p>
+                        <div class="info-callout info-callout--driver">
+                            <strong>No public sign-up</strong>
+                            <p>Drivers are added by operations staff. Your PIN is sent by SMS or shared in person.</p>
+                        </div>
+                        <div class="form-field">
+                            <label for="driverSelect">Your profile</label>
+                            <select id="driverSelect"><option value="">— Select your name —</option></select>
+                        </div>
+                        <div class="form-field">
+                            <label for="driverPin">PIN</label>
+                            <input type="password" id="driverPin" placeholder="PIN from operations" maxlength="6" class="pin-input" autocomplete="current-password">
+                        </div>
+                        <button type="button" id="driverLoginBtn" class="btn-primary">Sign in</button>
+                        <p class="auth-hint">Forgot your PIN? Contact campus operations.</p>
+                    </section>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <main class="app-main app-main--driver" id="driverAppSection" hidden>
+        <div class="driver-app-shell">
+            <header class="driver-app-bar">
+                <div class="driver-app-bar-info">
+                    <p class="driver-app-label">Signed in</p>
+                    <h1 id="driverDisplayName">Driver</h1>
+                    <p id="driverStatusLine" class="driver-status-line"></p>
+                </div>
+                <div class="driver-app-bar-actions">
+                    <span class="live-badge live-badge--inline">● Live</span>
+                    <button type="button" id="driverLogoutBtn" class="btn-secondary btn-secondary--sm btn-secondary--driver">Log out</button>
+                </div>
+            </header>
+
+            <p id="driverMessage" class="driver-message driver-message--toast" hidden></p>
+
+            <div id="driverBatchCard" class="driver-batch-card" hidden>
+                <div class="driver-batch-header">
+                    <p class="driver-job-label">Your route</p>
+                    <span id="batchCountBadge" class="fleet-count-badge">0 passengers</span>
+                </div>
+                <p class="driver-batch-hint">Pick up all passengers first, then drop each at their destination — order optimized by QueueGo.</p>
+                <div id="batchStopList" class="driver-batch-list"></div>
+            </div>
+
+            <div id="noRideCard" class="driver-waiting-card" hidden>
+                <span class="driver-waiting-icon" aria-hidden="true">🛺</span>
+                <p class="driver-waiting-title">Waiting for jobs</p>
+                <p class="driver-waiting-text">Stay on this screen. New rides appear here automatically.</p>
+            </div>
+        </div>
+    </main>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="/app-shared.js"></script>
+    <script src="/driver.js"></script>
+</body>
+</html>

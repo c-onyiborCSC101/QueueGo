@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Operations — QueueGo</title>
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body class="theme-admin auth-body" id="adminBody">
+
+    <header class="app-topbar app-topbar--dark" id="adminTopbar">
+        <a href="/" class="app-brand app-brand--light">
+            <span class="app-brand-mark">🛺</span>
+            <span class="app-brand-text">QueueGo</span>
+        </a>
+        <a href="/" class="app-topbar-link app-topbar-link--light">← Home</a>
+    </header>
+
+    <main class="auth-page" id="loginPanel">
+        <div class="auth-split">
+            <aside class="auth-hero auth-hero--admin">
+                <div class="auth-hero-inner">
+                    <span class="portal-badge portal-badge--admin">Operations</span>
+                    <h1>Staff control room</h1>
+                    <p class="auth-hero-text">Authorized personnel only — monitor rides, register drivers, and manage the fleet.</p>
+                    <ul class="auth-hero-list">
+                        <li>Real-time queue and driver status</li>
+                        <li>Auto-dispatch with manual override tools</li>
+                        <li>Driver and staff account management</li>
+                    </ul>
+                </div>
+            </aside>
+            <div class="auth-form-panel">
+                <div class="auth-form-card auth-form-card--admin">
+                    <h2>Sign in</h2>
+                    <p class="auth-form-lead">Use your operations email and password.</p>
+                    <form id="adminLoginForm" class="auth-form">
+                        <div class="form-field">
+                            <label for="adminEmail">Work email</label>
+                            <input type="email" id="adminEmail" placeholder="you@pau.edu.ng" required autocomplete="email">
+                        </div>
+                        <div class="form-field">
+                            <label for="adminPassword">Password</label>
+                            <input type="password" id="adminPassword" placeholder="Your password" required autocomplete="current-password">
+                        </div>
+                        <button type="submit" class="btn-primary">Sign in</button>
+                    </form>
+                    <p id="loginMessage" class="auth-message"></p>
+                    <p id="adminSetupHint" class="auth-hint"></p>
+                    <p class="auth-footer"><a href="/staff/register" id="adminRegisterLink">Create staff account</a></p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <main class="app-main app-main--admin" id="dashboardPanel" hidden>
+        <div class="app-container app-container--admin">
+            <div class="app-page-header app-page-header--admin">
+                <div>
+                    <span class="portal-badge portal-badge--admin portal-badge--inline">Operations</span>
+                    <h1>Control room</h1>
+                    <p class="subtitle">Live monitoring · auto-dispatch · emergency override</p>
+                </div>
+                <button type="button" id="adminLogoutBtn" class="btn-secondary btn-secondary--sm btn-secondary--admin">Log out</button>
+            </div>
+            <p class="live-badge live-badge--block">● Live (Socket.IO)</p>
+            <p id="adminMessage" class="admin-message"></p>
+            <section class="stats-grid" id="statsGrid">
+                <div class="stat-card"><span class="stat-label">Waiting</span><span class="stat-value" id="statWaiting">0</span></div>
+                <div class="stat-card"><span class="stat-label">Assigned / Active</span><span class="stat-value" id="statAssigned">0</span></div>
+                <div class="stat-card"><span class="stat-label">Completed</span><span class="stat-value" id="statCompleted">0</span></div>
+                <div class="stat-card"><span class="stat-label">Available Drivers</span><span class="stat-value" id="statAvailable">0</span></div>
+                <div class="stat-card"><span class="stat-label">Busy Drivers</span><span class="stat-value" id="statBusy">0</span></div>
+            </section>
+
+            <section class="queue-board">
+                <section class="panel-card panel-card--admin">
+                    <h2>Waiting for driver</h2>
+                    <div id="waitingList" class="list-panel queue-scroll"></div>
+                </section>
+                <section class="panel-card panel-card--admin">
+                    <h2>Active rides</h2>
+                    <div id="activeList" class="list-panel queue-scroll"></div>
+                </section>
+                <section class="panel-card panel-card--admin">
+                    <h2>Full passenger queue</h2>
+                    <div id="queueList" class="list-panel queue-scroll"></div>
+                </section>
+            </section>
+
+            <section class="panel-card panel-card--admin panel-card--fleet">
+                <div class="panel-card-header">
+                    <div>
+                        <h2>Registered drivers</h2>
+                        <p class="panel-lead">All keke operators on the system. Remove drivers who are no longer active.</p>
+                    </div>
+                    <span id="driverCountBadge" class="fleet-count-badge">0 drivers</span>
+                </div>
+                <div id="driverList" class="list-panel fleet-list"></div>
+            </section>
+
+            <div class="admin-forms-grid">
+                <section class="panel-card panel-card--admin">
+                    <h2>Register driver</h2>
+                    <p class="panel-lead">Drivers don't sign up themselves. PIN is SMS'd if a phone is provided.</p>
+                    <form id="driverForm" class="stacked-form">
+                        <div class="form-field"><label for="driverName">Driver name</label><input type="text" id="driverName" placeholder="Full name" required></div>
+                        <div class="form-field"><label for="driverPhone">Phone number</label><input type="tel" id="driverPhone" placeholder="08012345678" required></div>
+                        <div class="form-field"><label for="driverPin">PIN <span class="label-optional">(default 1234)</span></label><input type="password" id="driverPin" placeholder="4–6 digit PIN" maxlength="6"></div>
+                        <button type="submit" class="btn-primary">Register driver</button>
+                    </form>
+                    <div id="driverOnboardingCard" class="onboarding-card" hidden></div>
+                </section>
+                <section class="panel-card panel-card--admin">
+                    <h2>Add staff member</h2>
+                    <p class="panel-lead">Create another operations login without sharing your password.</p>
+                    <form id="staffForm" class="stacked-form">
+                        <div class="form-field"><label for="staffName">Full name</label><input type="text" id="staffName" placeholder="Full name" required></div>
+                        <div class="form-field"><label for="staffEmail">Work email</label><input type="email" id="staffEmail" placeholder="colleague@pau.edu.ng" required></div>
+                        <div class="form-field"><label for="staffPassword">Temporary password</label><input type="password" id="staffPassword" placeholder="Min 6 characters" required minlength="6"></div>
+                        <button type="submit" class="btn-primary">Add staff</button>
+                    </form>
+                </section>
+            </div>
+
+            <section class="panel-card panel-card--admin">
+                <h2>Ride history</h2>
+                <div id="historyList" class="list-panel queue-scroll"></div>
+            </section>
+        </div>
+    </main>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="/app-shared.js"></script>
+    <script src="/admin.js"></script>
+</body>
+</html>
