@@ -1,140 +1,132 @@
-# SMS notifications on driver assign
+# QueueGo SMS (Termii)
 
-When a passenger request is **assigned** to a driver (auto-dispatch or admin reassign), the system sends an SMS to the **driver's phone** stored in the database.
+QueueGo sends **real SMS** to drivers when:
 
-## Demo mode (no API key)
+| Event | SMS content |
+|-------|-------------|
+| Admin registers a driver | Welcome message + driver portal link + **PIN** |
+| Ride assigned to driver | Passenger, pickup, destination + **Reply 1 = Accept / 0 = Reject** |
+| Driver replies by SMS | Confirmation text (accepted / rejected) |
 
-Default `SMS_PROVIDER=console` prints the SMS in your terminal:
-
-```bash
-cd backend
-npm start
-```
-
-Submit a ride with an available driver — watch the server console for:
-
-```
---- SMS (demo mode) ---
-To: 2348012345678
-PAU Smart Keke: New ride assigned.
-...
-```
-
-Use this for viva demos without spending on SMS credits.
+Passenger SMS is not implemented yet (no passenger phone field).
 
 ---
 
-## Live SMS with Termii (recommended in Nigeria)
+## 1. Termii account setup
 
-1. Create an account at [https://termii.com](https://termii.com)
-2. Get your **API key** from the dashboard
-3. Register a **Sender ID** (e.g. `PAU Keke`) — may require approval
-4. Fund your wallet (pay-as-you-go)
-5. Create `backend/.env`:
+1. Sign up at [https://termii.com](https://termii.com)
+2. Copy your **API key** from the dashboard
+3. Register a **Sender ID** (3–11 characters, e.g. `QueueGo`) — approval may take a short while
+4. Fund your wallet (pay-as-you-go; a few hundred naira is enough for FYP testing)
+5. Register a **phone number** for inbound SMS in the Termii console (required for two-way replies)
+
+---
+
+## 2. Local development
+
+Create `backend/.env`:
 
 ```env
 SMS_PROVIDER=termii
 TERMII_API_KEY=your_actual_api_key
-TERMII_SENDER_ID=PAU Keke
+TERMII_SENDER_ID=QueueGo
+TERMII_CHANNEL=dnd
+PUBLIC_URL=http://localhost:3000
 ```
 
-6. Restart the server: `npm start`
-
-**Phone format:** drivers should be registered as `08012345678` or `2348012345678`.
-
----
-
-## Live SMS with Africa's Talking
-
-```env
-SMS_PROVIDER=africastalking
-AT_API_KEY=your_api_key
-AT_USERNAME=your_username
-```
-
----
-
-## Driver welcome PIN (on registration)
-
-When admin **registers a new driver**, a welcome SMS is sent with the driver portal link and PIN.
-
-| `SMS_PROVIDER` | What happens |
-|----------------|--------------|
-| `console` (default) | Message prints in the **server terminal** — not to a real phone |
-| `termii` / `africastalking` | Real SMS to the driver's phone |
-
----
-
-## When SMS is sent
-
-| Event | Driver SMS |
-|-------|------------|
-| Admin registers a new driver | Yes (welcome + PIN) |
-| Passenger submits + driver auto-assigned | Yes |
-| Waiting passenger auto-assigned after another ride completes | Yes |
-| Admin **Reassign driver** | Yes (new driver) |
-| Driver rejects (passenger back to waiting) | Only if another driver is assigned |
-
-Passenger SMS is **not** implemented yet (no passenger phone field in the form). You can add that in a future sprint.
-
----
-
-## Two-way SMS: Reply 1 = Accept, 0 = Reject
-
-Assignment SMS now ends with:
-
-```
-Reply 1 = Accept
-Reply 0 = Reject
-```
-
-When the driver texts back, the system updates the ride (same as the driver app).
-
-### Test locally (demo mode — no real phone)
-
-1. Submit a ride so a driver gets assigned (watch console for assign SMS).
-2. In the **same terminal** where the server is running, type **`1`** then press **Enter** (or **`0`** to reject).
-
-   You should see `[DEMO SMS] OK: Ride accepted...` and the passenger page updates.
-
-3. **Or** in a **second terminal**, simulate the driver replying **1**:
+Restart the server:
 
 ```bash
-curl -X POST http://localhost:3000/sms/simulate \
+cd backend
+npm install
+npm start
+```
+
+Send a test SMS:
+
+```bash
+npm run test-sms -- 08012345678
+```
+
+---
+
+## 3. Production on Render (queuego.onrender.com)
+
+In **Render → Environment**, set:
+
+| Variable | Value |
+|----------|--------|
+| `SMS_PROVIDER` | `termii` |
+| `TERMII_API_KEY` | your Termii API key |
+| `TERMII_SENDER_ID` | `QueueGo` (or your approved sender) |
+| `TERMII_CHANNEL` | `dnd` (transactional — recommended for ride alerts) |
+| `PUBLIC_URL` | `https://queuego.onrender.com` |
+
+Redeploy after saving. Check **Logs** on startup — you should see:
+
+```
+SMS provider: termii
+Termii sender: QueueGo (channel: dnd)
+Termii inbound webhook → https://queuego.onrender.com/webhooks/sms/inbound
+```
+
+---
+
+## 4. Inbound webhook (driver replies 1 / 0)
+
+Drivers can accept or reject rides by replying to the assignment SMS. Termii must forward inbound messages to your server.
+
+1. Open [Termii account → Webhook](https://accounts.termii.com/#/account/webhook/config)
+2. Set the webhook URL to:
+
+```
+https://queuego.onrender.com/webhooks/sms/inbound
+```
+
+3. Save
+
+When a driver texts **1** or **0**, Termii POSTs JSON like:
+
+```json
+{
+  "type": "inbound",
+  "sender": "2348012345678",
+  "message": "1"
+}
+```
+
+QueueGo updates the ride the same way as the driver web app.
+
+**Test without a phone** (any environment):
+
+```bash
+curl -X POST https://queuego.onrender.com/sms/simulate \
   -H "Content-Type: application/json" \
-  -d '{"phone":"08087654321","message":"1"}'
+  -d '{"phone":"08012345678","message":"1"}'
 ```
 
-Use the **exact phone** registered for that driver. Replace `1` with `0` to reject.
+Use the driver's registered phone number.
 
-3. Check passenger page — status should change to **DRIVER ON THE WAY** after accept.
+---
 
-### Live SMS with Termii (inbound webhook)
+## 5. Admin dashboard
 
-Termii must forward incoming SMS to your server:
+After staff login, the admin page shows whether SMS is in **demo** or **Termii** mode and displays the inbound webhook URL when live.
 
-1. Expose your local server with [ngrok](https://ngrok.com) (for testing):
-   ```bash
-   ngrok http 3000
-   ```
-2. In Termii dashboard → **Webhook / Inbound SMS**, set URL to:
-   ```
-   https://YOUR-NGROK-ID.ngrok.io/webhooks/sms/inbound
-   ```
-3. Set `SMS_PROVIDER=termii` and your API key in `.env`.
-4. Driver receives assign SMS → replies `1` or `0` → Termii POSTs to your webhook.
+When you register a driver with a phone number:
 
-**Payload fields supported:** `phone`/`from`/`sender` + `message`/`text`.
+- **Termii:** PIN + portal link sent to their phone automatically
+- **Console:** message prints in server logs only (for free local demos)
 
-### Africa's Talking
+---
 
-Set incoming SMS callback URL to:
+## Demo mode (no API key)
 
-```
-https://your-domain.com/webhooks/sms/inbound
+```env
+SMS_PROVIDER=console
 ```
 
-Uses `from` and `text` from their POST body.
+Assignment SMS prints in the terminal. Type **1** or **0** + Enter in that same terminal to simulate a driver reply.
 
 ---
 
@@ -150,7 +142,11 @@ SMS_PROVIDER=off
 
 | Issue | Fix |
 |-------|-----|
-| Nothing in console | Check driver has a valid `phone` in admin |
-| Termii error | Verify API key, sender ID, wallet balance |
-| Invalid phone | Use Nigerian format `080...` or `234...` |
-| SMS not received | Check DND list; try Termii test number in their dashboard |
+| Driver didn't get PIN SMS | Check `TERMII_API_KEY`, sender ID approval, wallet balance |
+| Ride alert not received | Confirm driver phone is unique and valid (`080…` or `234…`) |
+| Reply 1/0 does nothing | Set inbound webhook URL in Termii; confirm `PUBLIC_URL` on Render |
+| `Invalid phone` | Use Nigerian format `08012345678` |
+| DND numbers | Use `TERMII_CHANNEL=dnd` for transactional delivery |
+| Termii error in admin | Read Render logs for the exact API message |
+
+Official Termii inbound docs: [developers.termii.com/incoming](https://developers.termii.com/incoming)

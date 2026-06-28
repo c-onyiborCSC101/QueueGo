@@ -43,7 +43,7 @@ function buildDriverAssignMessage({ passengerName, pickup, destination, requestI
         `Passenger: ${passengerName}\n` +
         `Pickup: ${pickup}\n` +
         dropLine +
-        `Reply 1 = Picked up\n` +
+        `Reply 1 = Accept\n` +
         `Reply 0 = Reject`
     );
 }
@@ -82,10 +82,15 @@ function parseInboundPayload(body) {
         return null;
     }
 
+    // Termii delivery reports (outbound) — not driver replies
+    if (body.type && String(body.type).toLowerCase() !== "inbound") {
+        return null;
+    }
+
     const phone =
+        body.sender ||
         body.phone ||
         body.from ||
-        body.sender ||
         body.msisdn ||
         body.senderNumber ||
         body.sender_number;
@@ -121,7 +126,12 @@ async function sendViaTermii(phone, message) {
     const data = await response.json();
 
     if (!response.ok) {
-        throw new Error(data.message || data.error || "Termii SMS failed");
+        const detail =
+            data.message ||
+            data.error ||
+            (Array.isArray(data.errors) ? data.errors.join(", ") : null) ||
+            `Termii HTTP ${response.status}`;
+        throw new Error(detail);
     }
 
     return data;
@@ -245,6 +255,33 @@ function isSmsEnabled() {
     return SMS_PROVIDER !== "off" && SMS_PROVIDER !== "false";
 }
 
+function isTermiiMode() {
+    return SMS_PROVIDER === "termii";
+}
+
+function getInboundWebhookPath() {
+    return "/webhooks/sms/inbound";
+}
+
+function getSmsStatus(publicBaseUrl) {
+    const base = publicBaseUrl ? String(publicBaseUrl).replace(/\/$/, "") : null;
+    const termiiReady = isTermiiMode() && Boolean(TERMII_API_KEY);
+
+    return {
+        provider: SMS_PROVIDER,
+        enabled: isSmsEnabled(),
+        termiiConfigured: termiiReady,
+        senderId: TERMII_SENDER_ID,
+        channel: TERMII_CHANNEL,
+        inboundWebhookUrl: base ? `${base}${getInboundWebhookPath()}` : null,
+        features: {
+            driverWelcomePin: termiiReady || SMS_PROVIDER === "console" || SMS_PROVIDER === "africastalking",
+            rideAssignAlerts: isSmsEnabled(),
+            smsReplyAcceptReject: isSmsEnabled()
+        }
+    };
+}
+
 function buildDriverWelcomeMessage({ driverName, pin, portalUrl }) {
     return (
         `QueueGo — driver account ready.\n` +
@@ -292,6 +329,9 @@ module.exports = {
     parseDriverReplyAction,
     parseInboundPayload,
     isSmsEnabled,
+    isTermiiMode,
+    getInboundWebhookPath,
+    getSmsStatus,
     getLastConsoleAssign,
     isConsoleSmsMode
 };

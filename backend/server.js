@@ -47,7 +47,10 @@ const {
     parseDriverReplyAction,
     parseInboundPayload,
     getLastConsoleAssign,
-    isConsoleSmsMode
+    isConsoleSmsMode,
+    isTermiiMode,
+    getInboundWebhookPath,
+    getSmsStatus
 } = require("./sms");
 
 const WAIT_THRESHOLD_MINUTES = Number(process.env.WAIT_THRESHOLD_MINUTES || 5);
@@ -782,12 +785,18 @@ app.post("/driver", requireAdmin, (req, res) => {
                 pin: driverPin,
                 portalUrl,
                 smsSent: Boolean(smsResult.ok),
-                smsMode,
+                smsMode: smsMode,
+                smsError: smsResult.ok ? null : smsResult.reason || null,
                 smsIsConsole: isConsoleSmsMode()
             });
         }
     );
     });
+});
+
+app.get("/admin/sms/status", requireAdmin, (req, res) => {
+    const publicBase = process.env.PUBLIC_URL || getPortalBaseUrl(req);
+    res.json(getSmsStatus(publicBase));
 });
 
 app.get("/queue", requireAdmin, (req, res) => {
@@ -1465,7 +1474,20 @@ httpServer.listen(PORT, () => {
     console.log(`Driver:    http://localhost:${PORT}/driver`);
     console.log(`Staff:     http://localhost:${PORT}/staff`);
     console.log(`Staff reg: http://localhost:${PORT}/staff/register`);
-    console.log(`SMS provider: ${process.env.SMS_PROVIDER || "console"} (set SMS_PROVIDER=termii to send real SMS)`);
+    const smsStatus = getSmsStatus(process.env.PUBLIC_URL || `http://localhost:${PORT}`);
+    console.log(`SMS provider: ${smsStatus.provider}`);
+    if (isTermiiMode()) {
+        if (smsStatus.termiiConfigured) {
+            console.log(`Termii sender: ${smsStatus.senderId} (channel: ${smsStatus.channel})`);
+            if (smsStatus.inboundWebhookUrl) {
+                console.log(`Termii inbound webhook → ${smsStatus.inboundWebhookUrl}`);
+            }
+        } else {
+            console.warn("[SMS] SMS_PROVIDER=termii but TERMII_API_KEY is missing — falling back to console logs.");
+        }
+    } else if (isConsoleSmsMode()) {
+        console.log("SMS demo mode — set SMS_PROVIDER=termii for real texts (see SMS_SETUP.md)");
+    }
     console.log(`Wait threshold: ${WAIT_THRESHOLD_MINUTES} min (nearest-driver dispatch after this)`);
 
     setInterval(processWaitingQueue, 30000);

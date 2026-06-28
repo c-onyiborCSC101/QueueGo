@@ -36,11 +36,20 @@ Open:
 4. Environment variables:
    - `ADMIN_PASSWORD` — your admin password
    - `JWT_SECRET` — long random string
-   - `SMS_PROVIDER` — `console` for demo (no SMS cost) or `termii` for live SMS (see `SMS_SETUP.md`)
-   - `PUBLIC_URL` — e.g. `https://queuego.onrender.com` (for links in SMS/logs)
-   - `TERMII_API_KEY` / `TERMII_SENDER_ID` — if using Termii
+   - `SMS_PROVIDER` — `termii` for live SMS (see `SMS_SETUP.md`)
+   - `TERMII_API_KEY` — from [termii.com](https://termii.com) dashboard
+   - `TERMII_SENDER_ID` — approved sender (e.g. `QueueGo`)
+   - `TERMII_CHANNEL` — `dnd` (transactional ride alerts)
+   - `PUBLIC_URL` — `https://queuego.onrender.com` (links in SMS + webhook URL in logs)
    - `PORT` — `3000` (Render sets this automatically)
-5. Add a **persistent disk** mounted at `/opt/render/project/src/backend` so `database.db` survives restarts (optional but recommended).
+
+5. **Termii inbound webhook** — in [Termii webhook settings](https://accounts.termii.com/#/account/webhook/config), set:
+   ```
+   https://queuego.onrender.com/webhooks/sms/inbound
+   ```
+   Required for drivers to reply **1** (accept) or **0** (reject) by SMS.
+
+6. Add a **persistent disk** mounted at `/opt/render/project/src/backend` so `database.db` survives restarts (optional but recommended).
 
 Your live URLs will be:
 

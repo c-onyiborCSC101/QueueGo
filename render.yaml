@@ -9,8 +9,18 @@ services:
     envVars:
       - key: NODE_VERSION
         value: "20"
+      - key: PUBLIC_URL
+        value: https://queuego.onrender.com
       - key: SMS_PROVIDER
-        value: console
+        value: termii
+      - key: TERMII_SENDER_ID
+        value: QueueGo
+      - key: TERMII_CHANNEL
+        value: dnd
+      - key: TERMII_API_KEY
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
       - key: ADMIN_OPEN_REGISTRATION
         value: "true"
       - key: MAX_BATCH_SIZE
