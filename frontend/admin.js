@@ -5,6 +5,7 @@ const adminLogoutBtn = document.getElementById("adminLogoutBtn");
 const driverForm = document.getElementById("driverForm");
 const staffForm = document.getElementById("staffForm");
 const driverOnboardingCard = document.getElementById("driverOnboardingCard");
+const smsStatusBanner = document.getElementById("smsStatusBanner");
 const adminSetupHint = document.getElementById("adminSetupHint");
 const adminRegisterLink = document.getElementById("adminRegisterLink");
 const waitingList = document.getElementById("waitingList");
@@ -222,6 +223,39 @@ function showDashboard() {
     fallbackPollTimer = setInterval(refreshDashboard, 30000);
 }
 
+async function loadSmsStatus() {
+    if (!smsStatusBanner) return;
+
+    try {
+        const response = await authFetch("/admin/sms/status");
+        const data = await response.json();
+        if (!response.ok) return;
+
+        if (data.provider === "termii" && data.termiiConfigured) {
+            smsStatusBanner.hidden = false;
+            smsStatusBanner.innerHTML = `
+                <h3>Live SMS (Termii)</h3>
+                <p class="onboarding-note">Driver PINs and ride alerts are sent by SMS. Drivers can reply <strong>1</strong> to accept or <strong>0</strong> to reject.</p>
+                <p class="onboarding-note">Inbound webhook (set in <a href="https://accounts.termii.com" target="_blank" rel="noopener">Termii dashboard</a>):<br><code>${escapeHtml(data.inboundWebhookUrl || "/webhooks/sms/inbound")}</code></p>
+            `;
+            return;
+        }
+
+        if (data.provider === "console") {
+            smsStatusBanner.hidden = false;
+            smsStatusBanner.innerHTML = `
+                <h3>SMS demo mode</h3>
+                <p class="onboarding-note">Messages print in the server logs only. Set <code>SMS_PROVIDER=termii</code> on Render for real texts — see <code>SMS_SETUP.md</code>.</p>
+            `;
+            return;
+        }
+
+        smsStatusBanner.hidden = true;
+    } catch {
+        smsStatusBanner.hidden = true;
+    }
+}
+
 async function refreshDashboard() {
     if (!getAdminToken()) return;
 
@@ -230,7 +264,8 @@ async function refreshDashboard() {
             loadStats(),
             loadQueue(),
             loadDrivers(),
-            loadHistory()
+            loadHistory(),
+            loadSmsStatus()
         ]);
     } catch (err) {
         console.error(err);
