@@ -579,11 +579,15 @@ button:not(.btn-link):not(.btn-primary):not(.btn-secondary):not(.btn-remove-driv
 .btn-reject { background: #c62828; }
 .btn-reassign { background: #1565c0; }
 .btn-arriving { background: #ef6c00; }
+.btn-accept { background: #e65100; }
+.btn-decline { background: #c62828; }
 
 .btn-complete:hover { background: #1b5e20; }
 .btn-reject:hover { background: #b71c1c; }
 .btn-reassign:hover { background: #0d47a1; }
 .btn-arriving:hover { background: #e65100; }
+.btn-accept:hover { background: #bf360c; }
+.btn-decline:hover { background: #b71c1c; }
 
 .card-status-waiting { border-left-color: orange; }
 .card-status-assigned { border-left-color: #1565c0; }
@@ -2056,6 +2060,11 @@ body.modal-open { overflow: hidden; }
 
 .driver-batch-stop--pickup {
     border-left: 4px solid #e65100;
+}
+
+.driver-batch-stop--pending {
+    background: linear-gradient(135deg, #fff8f0 0%, #fff 55%);
+    border-color: #ffcc80;
 }
 
 .driver-batch-stop--dropoff {

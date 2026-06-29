@@ -1088,6 +1088,13 @@ function handleDriverReplyForRide(driverId, requestId, messageText, callback) {
                 if (acceptErr) return callback(acceptErr);
                 if (!result.ok) return callback(null, result);
 
+                logDriverRideDecision("SMS", "accept", {
+                    requestId,
+                    driverName: driver.name,
+                    passengerName: result.ride?.name,
+                    pickup: result.ride?.location
+                });
+
                 notifyDriverSmsResult(
                     driver.phone,
                     `QueueGo: Ride #${requestId} ACCEPTED.\nPassenger: ${result.ride.name}\nPickup: ${result.ride.location}\nHead there now.`
@@ -1101,23 +1108,41 @@ function handleDriverReplyForRide(driverId, requestId, messageText, callback) {
             if (rejectErr) return callback(rejectErr);
             if (!result.ok) return callback(null, result);
 
+            logDriverRideDecision("SMS", "reject", {
+                requestId,
+                driverName: driver.name,
+                passengerName: result.ride?.name || result.passengerName,
+                pickup: result.pickup || result.ride?.location
+            });
+
             notifyDriverSmsResult(
                 driver.phone,
-                `QueueGo: Ride #${requestId} REJECTED.\nPassenger returned to waiting queue.`
+                `QueueGo: Ride #${requestId} DECLINED.\nPassenger returned to waiting queue.`
             );
             callback(null, { ok: true, action: "reject", ...result });
         });
     });
 }
 
+function logDriverRideDecision(channel, action, { requestId, driverName, passengerName, pickup }) {
+    const code = action === "accept" ? "1" : "0";
+    const verb = action === "accept" ? "ACCEPT" : "DECLINE";
+    console.log(
+        `[Driver ${channel}] ${verb} = ${code} for ride #${requestId} (${driverName || "driver"}, ${passengerName || "passenger"} @ ${pickup || "pickup"})`
+    );
+}
+
 function driverPickupPassenger(driverId, requestId, callback) {
     db.get(
-        "SELECT * FROM requests WHERE id = ? AND driver_id = ? AND status = 'assigned'",
+        "SELECT * FROM requests WHERE id = ? AND driver_id = ? AND status IN ('accepted', 'arriving')",
         [requestId, driverId],
         (err, row) => {
             if (err) return callback(err);
             if (!row) {
-                return callback(null, { ok: false, error: "No passenger waiting for pickup on this ride." });
+                return callback(null, {
+                    ok: false,
+                    error: "Accept the ride first, then tap Picked up when the passenger is in your keke."
+                });
             }
 
             db.run(
@@ -1212,7 +1237,36 @@ function driverDropoffPassenger(driverId, requestId, callback) {
 }
 
 function driverAcceptRide(driverId, requestId, callback) {
-    driverPickupPassenger(driverId, requestId, callback);
+    db.get(
+        "SELECT * FROM requests WHERE id = ? AND driver_id = ? AND status = 'assigned'",
+        [requestId, driverId],
+        (err, row) => {
+            if (err) return callback(err);
+            if (!row) {
+                return callback(null, { ok: false, error: "No ride waiting for your response." });
+            }
+
+            db.run(
+                "UPDATE requests SET status = 'accepted' WHERE id = ?",
+                [requestId],
+                (updateErr) => {
+                    if (updateErr) return callback(updateErr);
+
+                    afterBatchMutation(Number(driverId), Number(requestId), (mutErr) => {
+                        if (mutErr) return callback(mutErr);
+                        getRequestWithDriver(requestId, (getErr, ride) => {
+                            if (getErr) return callback(getErr);
+                            callback(null, {
+                                ok: true,
+                                message: "Ride accepted. Head to the pickup point, then tap Picked up.",
+                                ride
+                            });
+                        });
+                    });
+                }
+            );
+        }
+    );
 }
 
 function driverRejectRide(driverId, requestId, callback) {
@@ -1231,9 +1285,12 @@ function driverRejectRide(driverId, requestId, callback) {
             if (row.status !== "assigned") {
                 return callback(null, {
                     ok: false,
-                    error: "Only passengers not yet picked up can be removed from your batch."
+                    error: "You can only decline rides you have not accepted yet."
                 });
             }
+
+            const passengerName = row.name;
+            const pickup = row.location;
 
             db.run(
                 "UPDATE requests SET status = 'waiting', driver_id = NULL, stop_order = NULL WHERE id = ?",
@@ -1251,12 +1308,14 @@ function driverRejectRide(driverId, requestId, callback) {
                             callback(null, {
                                 ok: true,
                                 message: dispatch
-                                    ? "Passenger removed. Another driver assigned from the queue."
+                                    ? "Ride declined. Passenger reassigned to another driver."
                                     : remaining
-                                      ? "Passenger removed from your batch. Route updated."
-                                      : "Passenger returned to waiting queue.",
+                                      ? "Ride declined. Your route was updated."
+                                      : "Ride declined. Passenger returned to waiting queue.",
                                 cleared: remaining === 0,
-                                autoAssigned: !!dispatch
+                                autoAssigned: !!dispatch,
+                                passengerName,
+                                pickup
                             });
                         };
 
@@ -1389,9 +1448,19 @@ app.post("/driver/:driverId/dropoff/:requestId", requireDriver, (req, res) => {
 app.post("/driver/:driverId/accept/:requestId", requireDriver, (req, res) => {
     const { driverId, requestId } = req.params;
 
-    driverPickupPassenger(Number(driverId), Number(requestId), (err, result) => {
+    driverAcceptRide(Number(driverId), Number(requestId), (err, result) => {
         if (err) return res.status(500).json({ error: err.message });
         if (!result.ok) return res.status(400).json({ error: result.error });
+
+        db.get("SELECT name FROM drivers WHERE id = ?", [driverId], (_, driver) => {
+            logDriverRideDecision("App", "accept", {
+                requestId,
+                driverName: driver?.name,
+                passengerName: result.ride?.name,
+                pickup: result.ride?.location
+            });
+        });
+
         res.json({
             message: result.message,
             ride: result.ride,
@@ -1406,6 +1475,16 @@ app.post("/driver/:driverId/reject/:requestId", requireDriver, (req, res) => {
     driverRejectRide(Number(driverId), Number(requestId), (err, result) => {
         if (err) return res.status(500).json({ error: err.message });
         if (!result.ok) return res.status(400).json({ error: result.error });
+
+        db.get("SELECT name FROM drivers WHERE id = ?", [driverId], (_, driver) => {
+            logDriverRideDecision("App", "reject", {
+                requestId,
+                driverName: driver?.name,
+                passengerName: result.passengerName,
+                pickup: result.pickup
+            });
+        });
+
         res.json({
             message: result.message,
             ride: null,
@@ -1630,10 +1709,6 @@ initDatabaseSchema((schemaErr) => {
                 console.log("[DEMO SMS] No ride waiting — submit a passenger request first.");
                 return;
             }
-
-            console.log(
-                `[DEMO SMS] Driver reply: ${reply} (ride #${ctx.requestId} → ${ctx.driverName}, ${ctx.passengerName} @ ${ctx.pickup})`
-            );
 
             handleDriverReplyForRide(ctx.driverId, ctx.requestId, reply, (err, result) => {
                 if (err) {

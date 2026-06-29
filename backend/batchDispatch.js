@@ -1,7 +1,8 @@
 const { distanceUnits, DEFAULT_HUB } = require("./campusLocations");
 
 const MAX_BATCH_SIZE = Number(process.env.MAX_BATCH_SIZE || 4);
-const BATCH_ACTIVE_STATUSES = ["assigned", "in_progress"];
+const BATCH_ACTIVE_STATUSES = ["assigned", "accepted", "arriving", "in_progress"];
+const PICKUP_PHASE_STATUSES = ["assigned", "accepted", "arriving"];
 
 function nearestNeighborOrder(items, getLocation, startLocation) {
     const remaining = [...items];
@@ -42,7 +43,7 @@ function getDriverOrigin(driver, batchRides) {
 }
 
 function buildOptimizedStops(batchRides, driver) {
-    const pickups = batchRides.filter((ride) => ride.status === "assigned");
+    const pickups = batchRides.filter((ride) => PICKUP_PHASE_STATUSES.includes(ride.status));
     const dropoffs = batchRides.filter((ride) => ride.status === "in_progress");
     const origin = getDriverOrigin(driver, batchRides);
 
@@ -182,7 +183,7 @@ function findDriverForNewRequest(db, pickupLocation, excludeDriverId, callback) 
 }
 
 function formatBatchStop(ride) {
-    const stopType = ride.status === "assigned" ? "pickup" : "dropoff";
+    const stopType = PICKUP_PHASE_STATUSES.includes(ride.status) ? "pickup" : "dropoff";
     return {
         requestId: ride.id,
         passengerName: ride.name,

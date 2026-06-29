@@ -274,31 +274,54 @@ function showBatch(batch) {
 
 function renderBatchStop(stop) {
     const isPickup = stop.stopType === "pickup";
-    const action = isPickup ? "pickup" : "dropoff";
-    const actionLabel = isPickup ? "Picked up" : "Dropped off";
+    const isAssigned = stop.status === "assigned";
     const routeLabel = isPickup
         ? `Pick up at <strong>${escapeHtml(stop.pickup)}</strong>`
         : `Drop at <strong>${escapeHtml(stop.destination)}</strong>`;
     const meta = isPickup
-        ? `Going to ${escapeHtml(stop.destination)}`
+        ? isAssigned
+            ? "New request — accept to start navigation"
+            : `Going to ${escapeHtml(stop.destination)}`
         : `Picked up from ${escapeHtml(stop.pickup)}`;
 
+    let actionsHtml = "";
+
+    if (isPickup && isAssigned) {
+        actionsHtml = `
+            <button type="button" class="driver-action-btn btn-accept" data-batch-action="accept" data-request-id="${stop.requestId}">
+                Accept
+            </button>
+            <button type="button" class="driver-action-btn btn-decline" data-batch-action="decline" data-request-id="${stop.requestId}">
+                Decline
+            </button>
+        `;
+    } else if (isPickup) {
+        actionsHtml = `
+            <button type="button" class="driver-action-btn btn-complete" data-batch-action="pickup" data-request-id="${stop.requestId}">
+                Picked up
+            </button>
+        `;
+    } else {
+        actionsHtml = `
+            <button type="button" class="driver-action-btn btn-complete" data-batch-action="dropoff" data-request-id="${stop.requestId}">
+                Dropped off
+            </button>
+        `;
+    }
+
     return `
-        <article class="driver-batch-stop driver-batch-stop--${stop.stopType}">
+        <article class="driver-batch-stop driver-batch-stop--${stop.stopType}${isAssigned ? " driver-batch-stop--pending" : ""}">
             <div class="driver-batch-stop-head">
                 <span class="driver-batch-stop-order">${stop.stopOrder}</span>
                 <div>
-                    <p class="driver-batch-stop-type">${isPickup ? "Pickup" : "Drop-off"}</p>
+                    <p class="driver-batch-stop-type">${isPickup ? (isAssigned ? "New request" : "Pickup") : "Drop-off"}</p>
                     <p class="driver-batch-stop-passenger">${escapeHtml(stop.passengerName)}</p>
                 </div>
             </div>
             <p class="driver-batch-stop-route">${routeLabel}</p>
             <p class="driver-batch-stop-meta">${meta}</p>
             <div class="driver-batch-stop-actions">
-                <button type="button" class="driver-action-btn btn-complete" data-batch-action="${action}" data-request-id="${stop.requestId}">
-                    ${actionLabel}
-                </button>
-                ${isPickup ? `<button type="button" class="driver-action-btn btn-reject" data-batch-action="reject" data-request-id="${stop.requestId}">Remove</button>` : ""}
+                ${actionsHtml}
             </div>
         </article>
     `;
@@ -314,8 +337,14 @@ function showNoBatch() {
 async function driverBatchAction(action, requestId) {
     if (!currentDriverId || !requestId) return;
 
-    const path =
-        action === "pickup" ? "pickup" : action === "dropoff" ? "dropoff" : "reject";
+    const pathMap = {
+        pickup: "pickup",
+        dropoff: "dropoff",
+        accept: "accept",
+        decline: "reject"
+    };
+    const path = pathMap[action];
+    if (!path) return;
 
     try {
         const response = await authFetch(

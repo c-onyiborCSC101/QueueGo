@@ -47,9 +47,9 @@ const STATUS_COLOR = {
 const STATUS_LABEL = {
     waiting: "WAITING FOR DRIVER",
     assigned: "DRIVER ASSIGNED",
+    accepted: "DRIVER EN ROUTE TO PICKUP",
     in_progress: "ON THE WAY TO YOUR DESTINATION",
     arriving: "ON THE WAY TO YOUR DESTINATION",
-    accepted: "ON THE WAY TO YOUR DESTINATION",
     completed: "RIDE COMPLETED",
     rejected: "RIDE REJECTED"
 };
