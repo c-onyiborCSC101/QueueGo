@@ -2,7 +2,31 @@ const crypto = require("crypto");
 const jwt = require("jsonwebtoken");
 
 const JWT_SECRET = process.env.JWT_SECRET || "pau-keke-fyp-secret-change-in-production";
+const PASSWORD_PEPPER =
+    process.env.PASSWORD_PEPPER || process.env.JWT_SECRET || "queuego-password-pepper";
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "pauadmin";
+
+function hashPassword(password) {
+    return crypto
+        .createHash("sha256")
+        .update(`${PASSWORD_PEPPER}:${String(password)}`)
+        .digest("hex");
+}
+
+/** Legacy hashes from older builds that mixed JWT_SECRET into password hashing. */
+function hashPasswordLegacy(password) {
+    return crypto
+        .createHash("sha256")
+        .update(`${String(password)}:${JWT_SECRET}`)
+        .digest("hex");
+}
+
+function verifyPassword(password, storedHash) {
+    if (!storedHash) return false;
+    const current = hashPassword(password);
+    if (current === storedHash) return true;
+    return hashPasswordLegacy(password) === storedHash;
+}
 
 function signAdminToken(adminId) {
     return jwt.sign({ role: "admin", adminId: Number(adminId) }, JWT_SECRET, { expiresIn: "8h" });
@@ -18,10 +42,6 @@ function signPassengerToken(passengerId) {
     return jwt.sign({ role: "passenger", passengerId: Number(passengerId) }, JWT_SECRET, {
         expiresIn: "7d"
     });
-}
-
-function hashPassword(password) {
-    return crypto.createHash("sha256").update(`${password}:${JWT_SECRET}`).digest("hex");
 }
 
 function verifyToken(token) {
@@ -97,6 +117,7 @@ module.exports = {
     signDriverToken,
     signPassengerToken,
     hashPassword,
+    verifyPassword,
     requireAdmin,
     requireDriver,
     requirePassenger

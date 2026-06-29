@@ -34,8 +34,11 @@ Open:
    - **Start command:** `npm start`
    - **Node version:** `20` (or set env `NODE_VERSION=20`) — avoids sqlite3 GLIBC errors on Render
 4. Environment variables:
+   - `JWT_SECRET` — long random string (**keep the same value across deploys**)
+   - `PASSWORD_PEPPER` — optional second secret for password hashing (recommended)
+   - `BOOTSTRAP_ADMIN_EMAIL` / `BOOTSTRAP_ADMIN_PASSWORD` — **auto-restore staff login after each deploy** (highly recommended on Render free tier)
+   - `DEMO_DRIVERS` — optional `Name:phone:pin|Name2:phone2:pin2` to restore drivers after redeploy
    - `ADMIN_PASSWORD` — your admin password
-   - `JWT_SECRET` — long random string
    - `SMS_PROVIDER` — `termii` for live SMS (see `SMS_SETUP.md`)
    - `TERMII_API_KEY` — from [termii.com](https://termii.com) dashboard
    - `TERMII_SENDER_ID` — approved sender (e.g. `QueueGo`)
@@ -49,7 +52,29 @@ Open:
    ```
    Required for drivers to reply **1** (accept) or **0** (reject) by SMS.
 
-6. Add a **persistent disk** mounted at `/opt/render/project/src/backend` so `database.db` survives restarts (optional but recommended).
+6. Add a **persistent disk** mounted at `/var/data` and set `DATABASE_PATH=/var/data/database.db` so accounts survive restarts (**paid Render plan only**). On the **free tier**, use `BOOTSTRAP_ADMIN_EMAIL` / `BOOTSTRAP_ADMIN_PASSWORD` instead — staff login is recreated automatically after each deploy.
+
+---
+
+## Why logins stop working after a deploy
+
+On Render **free tier**, the SQLite file is **wiped on every redeploy**. That removes staff, driver, and passenger accounts.
+
+**Fix (free tier):** set these in Render Environment:
+
+| Variable | Example |
+|----------|---------|
+| `BOOTSTRAP_ADMIN_EMAIL` | `ops@pau.edu.ng` |
+| `BOOTSTRAP_ADMIN_PASSWORD` | your chosen password |
+| `JWT_SECRET` | a fixed random string (never change after first deploy) |
+
+Optional — restore drivers automatically:
+
+```
+DEMO_DRIVERS=Richard:08066982086:1234|Paul:08012345678:1234
+```
+
+**Fix (paid tier):** attach a persistent disk and set `DATABASE_PATH=/var/data/database.db`.
 
 Your live URLs will be:
 

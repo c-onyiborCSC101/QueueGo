@@ -37,7 +37,11 @@ adminLoginForm.addEventListener("submit", async (e) => {
         const { response, data } = await postJson("/auth/admin/login", { email, password });
 
         if (!response.ok || data.error) {
-            setLoginMessage(data.error || "Login failed.", true);
+            const hint = data.hint ? ` ${data.hint}` : "";
+            setLoginMessage((data.error || "Login failed.") + hint, true);
+            if (data.accountsReset && adminRegisterLink) {
+                adminRegisterLink.hidden = false;
+            }
             return;
         }
 

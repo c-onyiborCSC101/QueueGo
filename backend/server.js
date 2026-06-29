@@ -24,10 +24,13 @@ const {
     signDriverToken,
     signPassengerToken,
     hashPassword,
+    verifyPassword,
     requireAdmin,
     requireDriver,
     requirePassenger
 } = require("./auth");
+const { openDatabase } = require("./db");
+const { runBootstrap, countRows } = require("./bootstrap");
 const { initRealtime, notifyRideChange, emitRidesUpdated, emitDriverUpdated, emitDriversUpdated } = require("./realtime");
 const readline = require("readline");
 const { distanceUnits, estimateMinutes, DEFAULT_HUB, getLocationList } = require("./campusLocations");
@@ -71,7 +74,33 @@ app.get("/", (req, res) => {
 });
 
 app.get("/health", (req, res) => {
-    res.json({ ok: true, service: "queuego" });
+    countRows(db, "admins", (adminErr, adminCount) => {
+        if (adminErr) {
+            return res.status(500).json({ ok: false, error: adminErr.message });
+        }
+
+        countRows(db, "drivers", (driverErr, driverCount) => {
+            if (driverErr) {
+                return res.status(500).json({ ok: false, error: driverErr.message });
+            }
+
+            const persistent = Boolean(process.env.DATABASE_PATH);
+            res.json({
+                ok: true,
+                service: "queuego",
+                databasePath: dbPath,
+                persistent,
+                adminCount,
+                driverCount,
+                bootstrapConfigured: Boolean(
+                    process.env.BOOTSTRAP_ADMIN_EMAIL && process.env.BOOTSTRAP_ADMIN_PASSWORD
+                ),
+                note: persistent
+                    ? "Database is on a persistent path."
+                    : "Accounts may reset after each deploy on Render free tier."
+            });
+        });
+    });
 });
 
 app.get("/passenger", (req, res) => {
@@ -96,7 +125,7 @@ app.get("/staff/register", (req, res) => {
 
 app.use(express.static(frontendDir));
 
-const db = new sqlite3.Database("./database.db");
+const { db, dbPath } = openDatabase();
 
 function broadcast(requestId, driverId) {
     notifyRideChange(getRequestWithDriver, requestId, driverId);
@@ -302,11 +331,10 @@ app.post("/auth/passenger/login", (req, res) => {
     }
 
     const normalizedEmail = String(email).trim().toLowerCase();
-    const passwordHash = hashPassword(password);
 
     db.get("SELECT * FROM passengers WHERE email = ?", [normalizedEmail], (err, row) => {
         if (err) return res.status(500).json({ error: err.message });
-        if (!row || row.password_hash !== passwordHash) {
+        if (!row || !verifyPassword(password, row.password_hash)) {
             return res.status(401).json({ error: "Invalid email or password." });
         }
 
@@ -372,12 +400,11 @@ app.post("/auth/admin/login", (req, res) => {
     }
 
     const normalizedEmail = String(email).trim().toLowerCase();
-    const passwordHash = hashPassword(password);
 
     db.get("SELECT * FROM admins WHERE email = ?", [normalizedEmail], (err, row) => {
         if (err) return res.status(500).json({ error: err.message });
 
-        if (row && row.password_hash === passwordHash) {
+        if (row && verifyPassword(password, row.password_hash)) {
             return res.json({
                 token: signAdminToken(row.id),
                 message: "Welcome back.",
@@ -390,11 +417,20 @@ app.post("/auth/admin/login", (req, res) => {
 
             if (count === 0 && password === ADMIN_PASSWORD) {
                 return res.status(409).json({
-                    error: "No staff accounts yet. Create the first one at /staff/register."
+                    error: "No staff accounts on this server yet.",
+                    hint: "Create your campus operations account at /staff/register.",
+                    accountsReset: true
                 });
             }
 
-            return res.status(401).json({ error: "Invalid email or password." });
+            return res.status(401).json({
+                error: "Invalid email or password.",
+                hint:
+                    count === 0
+                        ? "This server was recently redeployed and accounts were cleared. Register again at /staff/register."
+                        : "If you just deployed an update, your password may need to be reset by an admin.",
+                accountsReset: count === 0
+            });
         });
     });
 });
@@ -1473,6 +1509,23 @@ const httpServer = http.createServer(app);
 initRealtime(httpServer);
 
 httpServer.listen(PORT, () => {
+    runBootstrap(db, (bootstrapErr, bootstrapResult) => {
+        if (bootstrapErr) {
+            console.error("[Bootstrap] Failed:", bootstrapErr.message);
+            return;
+        }
+
+        if (bootstrapResult.admin?.created) {
+            console.log(`[Bootstrap] Staff login restored for ${bootstrapResult.admin.email}`);
+        } else if (bootstrapResult.admin?.updated) {
+            console.log(`[Bootstrap] Staff password synced for ${bootstrapResult.admin.email}`);
+        }
+
+        if (bootstrapResult.drivers?.created > 0) {
+            emitDriversUpdated();
+        }
+    });
+
     console.log(`Server running on port ${PORT}`);
     console.log(`Home:      http://localhost:${PORT}/`);
     console.log(`Passenger: http://localhost:${PORT}/passenger`);

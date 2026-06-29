@@ -115,7 +115,8 @@ async function onLogin(e) {
         });
 
         if (!response.ok || data.error) {
-            setAuthMessage(data.error || "Login failed.", true);
+            const hint = data.hint ? ` ${data.hint}` : "";
+            setAuthMessage((data.error || "Login failed.") + hint, true);
             loginBtn.disabled = false;
             loginBtn.textContent = "Log in";
             return;

@@ -14,7 +14,15 @@ services:
       - key: SMS_PROVIDER
         value: console
       - key: JWT_SECRET
-        generateValue: true
+        sync: false
+      - key: PASSWORD_PEPPER
+        sync: false
+      - key: BOOTSTRAP_ADMIN_EMAIL
+        sync: false
+      - key: BOOTSTRAP_ADMIN_PASSWORD
+        sync: false
+      - key: BOOTSTRAP_ADMIN_NAME
+        value: Campus Operations
       - key: ADMIN_OPEN_REGISTRATION
         value: "true"
       - key: MAX_BATCH_SIZE
