@@ -30,7 +30,7 @@ const {
     requirePassenger
 } = require("./auth");
 const { openDatabase } = require("./db");
-const { runBootstrap, countRows, ensureBootstrapAdminLogin } = require("./bootstrap");
+const { runBootstrap, countRows, ensureBootstrapAdminLogin, ensureDemoPassengerLogin } = require("./bootstrap");
 const { initRealtime, notifyRideChange, emitRidesUpdated, emitDriverUpdated, emitDriversUpdated } = require("./realtime");
 const readline = require("readline");
 const { distanceUnits, estimateMinutes, DEFAULT_HUB, getLocationList } = require("./campusLocations");
@@ -84,6 +84,11 @@ app.get("/health", (req, res) => {
                 return res.status(500).json({ ok: false, error: driverErr.message });
             }
 
+            countRows(db, "passengers", (passengerErr, passengerCount) => {
+                if (passengerErr) {
+                    return res.status(500).json({ ok: false, error: passengerErr.message });
+                }
+
             const persistent = Boolean(process.env.DATABASE_PATH);
             res.json({
                 ok: true,
@@ -92,12 +97,18 @@ app.get("/health", (req, res) => {
                 persistent,
                 adminCount,
                 driverCount,
+                passengerCount,
                 bootstrapConfigured: Boolean(
                     process.env.BOOTSTRAP_ADMIN_EMAIL && process.env.BOOTSTRAP_ADMIN_PASSWORD
+                ),
+                demoPassengersConfigured: Boolean(
+                    process.env.DEMO_PASSENGERS ||
+                        (process.env.BOOTSTRAP_PASSENGER_EMAIL && process.env.BOOTSTRAP_PASSENGER_PASSWORD)
                 ),
                 note: persistent
                     ? "Database is on a persistent path."
                     : "Accounts may reset after each deploy on Render free tier."
+            });
             });
         });
     });
@@ -335,19 +346,46 @@ app.post("/auth/passenger/login", (req, res) => {
 
     db.get("SELECT * FROM passengers WHERE email = ?", [normalizedEmail], (err, row) => {
         if (err) return res.status(500).json({ error: err.message });
-        if (!row || !verifyPassword(password, row.password_hash)) {
-            return res.status(401).json({ error: "Invalid email or password." });
+
+        if (row && verifyPassword(password, row.password_hash)) {
+            return res.json({
+                message: "Welcome back!",
+                token: signPassengerToken(row.id),
+                passenger: {
+                    id: row.id,
+                    name: row.name,
+                    email: row.email,
+                    phone: row.phone
+                }
+            });
         }
 
-        res.json({
-            message: "Welcome back!",
-            token: signPassengerToken(row.id),
-            passenger: {
-                id: row.id,
-                name: row.name,
-                email: row.email,
-                phone: row.phone
+        ensureDemoPassengerLogin(db, normalizedEmail, password, (bootstrapErr, demoPassenger) => {
+            if (bootstrapErr) {
+                return res.status(500).json({ error: bootstrapErr.message });
             }
+
+            if (demoPassenger) {
+                return res.json({
+                    message: "Welcome back!",
+                    token: signPassengerToken(demoPassenger.id),
+                    passenger: demoPassenger
+                });
+            }
+
+            countRows(db, "passengers", (countErr, passengerCount) => {
+                if (countErr) {
+                    return res.status(500).json({ error: countErr.message });
+                }
+
+                return res.status(401).json({
+                    error: "Invalid email or password.",
+                    hint:
+                        passengerCount === 0
+                            ? "This server was reset after idle time. Register again at /passenger/register, or ask your operator to set DEMO_PASSENGERS on Render."
+                            : "Double-check your email and password, or register at /passenger/register if this is a new device."
+                });
+            });
         });
     });
 });

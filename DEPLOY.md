@@ -37,6 +37,7 @@ Open:
    - `JWT_SECRET` — long random string (**keep the same value across deploys**)
    - `PASSWORD_PEPPER` — optional second secret for password hashing (recommended)
    - `BOOTSTRAP_ADMIN_EMAIL` / `BOOTSTRAP_ADMIN_PASSWORD` — **auto-restore staff login after each deploy** (highly recommended on Render free tier)
+   - `DEMO_PASSENGERS` — optional `Name:email:password|Name2:email2:password2` to restore passenger logins after redeploy
    - `DEMO_DRIVERS` — optional `Name:phone:pin|Name2:phone2:pin2` to restore drivers after redeploy
    - `ADMIN_PASSWORD` — your admin password
    - `SMS_PROVIDER` — `termii` for live SMS (see `SMS_SETUP.md`)
