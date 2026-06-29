@@ -5,7 +5,75 @@ const API_BASE =
         ? "http://localhost:3000"
         : window.location.origin;
 
+const CONNECTION_ERROR_MESSAGE =
+    "We could not connect to QueueGo right now. Check your internet connection and try again in a moment.";
+
+const WAKING_SERVER_MESSAGE =
+    "QueueGo is starting up. This can take up to a minute — please wait and try again.";
+
 let confirmModalReady = false;
+
+function delay(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function getFetchErrorMessage(err, response) {
+    if (response && (response.status === 502 || response.status === 503 || response.status === 504)) {
+        return WAKING_SERVER_MESSAGE;
+    }
+    if (err && err.message && err.message !== "Failed to fetch") {
+        return err.message;
+    }
+    return CONNECTION_ERROR_MESSAGE;
+}
+
+async function parseJsonResponse(response) {
+    const text = await response.text();
+    if (!text) {
+        return {};
+    }
+
+    try {
+        return JSON.parse(text);
+    } catch {
+        if (response.status === 502 || response.status === 503 || response.status === 504) {
+            throw new Error(WAKING_SERVER_MESSAGE);
+        }
+        throw new Error(CONNECTION_ERROR_MESSAGE);
+    }
+}
+
+async function fetchWithRetry(url, options = {}, retries = 2) {
+    let lastError = null;
+
+    for (let attempt = 0; attempt <= retries; attempt++) {
+        try {
+            return await fetch(url, options);
+        } catch (err) {
+            lastError = err;
+            if (attempt < retries) {
+                await delay(attempt === 0 ? 2000 : 4000);
+            }
+        }
+    }
+
+    throw lastError;
+}
+
+async function postJson(path, body, options = {}) {
+    const response = await fetchWithRetry(`${API_BASE}${path}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...(options.headers || {}) },
+        body: JSON.stringify(body),
+        ...options
+    });
+    const data = await parseJsonResponse(response);
+    return { response, data };
+}
+
+function warmUpServer() {
+    fetch(`${API_BASE}/health`, { method: "GET" }).catch(() => {});
+}
 
 function ensureConfirmModal() {
     if (confirmModalReady) return;

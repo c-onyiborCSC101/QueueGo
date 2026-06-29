@@ -12,6 +12,7 @@ function setSetupBadge(text, variant) {
     setupStatusBadge.className = `setup-status-badge setup-status-badge--${variant}`;
 }
 
+warmUpServer();
 loadSetupStatus();
 
 adminRegisterForm.addEventListener("submit", onRegister);
@@ -23,8 +24,8 @@ function setMessage(text, isError) {
 
 async function loadSetupStatus() {
     try {
-        const response = await fetch(`${API_BASE}/auth/admin/setup-status`);
-        const data = await response.json();
+        const response = await fetchWithRetry(`${API_BASE}/auth/admin/setup-status`);
+        const data = await parseJsonResponse(response);
 
         if (!response.ok) {
             registerIntro.textContent = "Could not load registration status.";
@@ -65,7 +66,7 @@ async function loadSetupStatus() {
         if (closedRegistration) closedRegistration.hidden = false;
         setSetupBadge("Closed", "closed");
     } catch (err) {
-        registerIntro.textContent = "Cannot reach server. Run npm start in the backend folder.";
+        registerIntro.textContent = getFetchErrorMessage(err);
     }
 }
 
@@ -92,13 +93,12 @@ async function onRegister(e) {
     setMessage("");
 
     try {
-        const response = await fetch(`${API_BASE}/auth/admin/register`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ name, email, password, inviteCode })
+        const { response, data } = await postJson("/auth/admin/register", {
+            name,
+            email,
+            password,
+            inviteCode
         });
-
-        const data = await response.json();
 
         if (!response.ok || data.error) {
             setMessage(data.error || "Registration failed.", true);
@@ -114,7 +114,7 @@ async function onRegister(e) {
             window.location.href = `/staff?${params.toString()}`;
         }, 1200);
     } catch (err) {
-        setMessage("Cannot reach server.", true);
+        setMessage(getFetchErrorMessage(err), true);
         adminRegisterBtn.disabled = false;
         adminRegisterBtn.querySelector(".btn-text").textContent = "Create staff account";
     }

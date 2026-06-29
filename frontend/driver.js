@@ -18,6 +18,7 @@ let currentDriverId = null;
 let currentBatch = null;
 
 loadDrivers();
+warmUpServer();
 setupSocket();
 driverLoginBtn.addEventListener("click", loginDriver);
 driverLogoutBtn.addEventListener("click", logoutDriver);
@@ -90,7 +91,7 @@ async function loadDrivers() {
             }
         }
     } catch (err) {
-        setMessage("Cannot load drivers. Is the server running?");
+        setMessage("Could not load drivers. Please refresh the page and try again.");
     }
 }
 

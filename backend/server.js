@@ -70,6 +70,10 @@ app.get("/", (req, res) => {
     res.sendFile(path.join(frontendDir, "home.html"));
 });
 
+app.get("/health", (req, res) => {
+    res.json({ ok: true, service: "queuego" });
+});
+
 app.get("/passenger", (req, res) => {
     res.sendFile(path.join(frontendDir, "index.html"));
 });
@@ -1486,7 +1490,10 @@ httpServer.listen(PORT, () => {
             console.warn("[SMS] SMS_PROVIDER=termii but TERMII_API_KEY is missing — falling back to console logs.");
         }
     } else if (isConsoleSmsMode()) {
-        console.log("SMS demo mode — set SMS_PROVIDER=termii for real texts (see SMS_SETUP.md)");
+        console.log("SMS demo mode — messages appear in these logs (not sent to real phones).");
+        const base = process.env.PUBLIC_URL || `http://localhost:${PORT}`;
+        console.log("Accept/reject rides in the driver web app, or simulate SMS:");
+        console.log(`  POST ${base}/sms/simulate  {"phone":"08012345678","message":"1"}`);
     }
     console.log(`Wait threshold: ${WAIT_THRESHOLD_MINUTES} min (nearest-driver dispatch after this)`);
 

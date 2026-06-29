@@ -34,12 +34,7 @@ adminLoginForm.addEventListener("submit", async (e) => {
     const password = document.getElementById("adminPassword").value;
 
     try {
-        const response = await fetch(`${API_BASE}/auth/admin/login`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ email, password })
-        });
-        const data = await response.json();
+        const { response, data } = await postJson("/auth/admin/login", { email, password });
 
         if (!response.ok || data.error) {
             setLoginMessage(data.error || "Login failed.", true);
@@ -50,7 +45,7 @@ adminLoginForm.addEventListener("submit", async (e) => {
         showDashboard();
         setMessage("Signed in. Live updates enabled.");
     } catch (err) {
-        setLoginMessage("Cannot reach server.", true);
+        setLoginMessage(getFetchErrorMessage(err), true);
     }
 });
 

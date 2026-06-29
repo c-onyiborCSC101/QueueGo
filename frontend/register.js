@@ -2,6 +2,7 @@ const registerForm = document.getElementById("registerForm");
 const registerMessage = document.getElementById("registerMessage");
 const registerSubmitBtn = document.getElementById("registerSubmitBtn");
 
+warmUpServer();
 registerForm.addEventListener("submit", onRegister);
 
 function setMessage(text, isError) {
@@ -32,13 +33,12 @@ async function onRegister(e) {
     setMessage("");
 
     try {
-        const response = await fetch(`${API_BASE}/auth/passenger/register`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ name, email, phone, password })
+        const { response, data } = await postJson("/auth/passenger/register", {
+            name,
+            email,
+            phone,
+            password
         });
-
-        const data = await response.json();
 
         if (!response.ok || data.error) {
             setMessage(data.error || "Registration failed. Please try again.", true);
@@ -58,7 +58,7 @@ async function onRegister(e) {
             window.location.href = `/passenger?${params.toString()}`;
         }, 1200);
     } catch (err) {
-        setMessage("Cannot reach server. Run npm start in the backend folder.", true);
+        setMessage(getFetchErrorMessage(err), true);
         registerSubmitBtn.disabled = false;
         registerSubmitBtn.textContent = "Create account";
     }

@@ -57,6 +57,8 @@ const STATUS_LABEL = {
 fillCampusLocationSelect(document.getElementById("location"), "— Select pickup location —");
 fillCampusLocationSelect(document.getElementById("destination"), "— Select destination —");
 
+warmUpServer();
+
 if (loginForm) {
     loginForm.addEventListener("submit", onLogin);
 }
@@ -107,15 +109,10 @@ async function onLogin(e) {
     setAuthMessage("");
 
     try {
-        const response = await fetch(`${API_BASE}/auth/passenger/login`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                email: document.getElementById("loginEmail").value.trim(),
-                password: document.getElementById("loginPassword").value
-            })
+        const { response, data } = await postJson("/auth/passenger/login", {
+            email: document.getElementById("loginEmail").value.trim(),
+            password: document.getElementById("loginPassword").value
         });
-        const data = await response.json();
 
         if (!response.ok || data.error) {
             setAuthMessage(data.error || "Login failed.", true);
@@ -126,7 +123,7 @@ async function onLogin(e) {
 
         startSession(data.passenger, data.token);
     } catch (err) {
-        setAuthMessage("Cannot reach server. Run npm start in the backend folder.", true);
+        setAuthMessage(getFetchErrorMessage(err), true);
         loginBtn.disabled = false;
         loginBtn.textContent = "Log in";
     }
@@ -299,7 +296,7 @@ async function onSubmit(e) {
         joinRideRoom(activeRide.requestId);
         loadRideHistory();
     } catch (err) {
-        showMessage("Network error. Is the server running?");
+        showMessage(getFetchErrorMessage(err));
     }
 }
 
