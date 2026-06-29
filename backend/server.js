@@ -28,7 +28,7 @@ const {
     requireDriver,
     requirePassenger
 } = require("./auth");
-const { initRealtime, notifyRideChange, emitRidesUpdated, emitDriverUpdated } = require("./realtime");
+const { initRealtime, notifyRideChange, emitRidesUpdated, emitDriverUpdated, emitDriversUpdated } = require("./realtime");
 const readline = require("readline");
 const { distanceUnits, estimateMinutes, DEFAULT_HUB, getLocationList } = require("./campusLocations");
 const {
@@ -783,6 +783,7 @@ app.post("/driver", requireAdmin, (req, res) => {
             }
 
             emitRidesUpdated();
+            emitDriversUpdated();
             res.json({
                 message: "Driver registered successfully.",
                 driverId,
@@ -933,6 +934,7 @@ app.delete("/driver/:id", requireAdmin, (req, res) => {
                     }
 
                     emitRidesUpdated();
+                    emitDriversUpdated();
                     processWaitingQueue();
 
                     const released = activeRides.length;

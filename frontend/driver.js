@@ -2,6 +2,8 @@ const driverSelect = document.getElementById("driverSelect");
 const driverPin = document.getElementById("driverPin");
 const driverLoginBtn = document.getElementById("driverLoginBtn");
 const driverLogoutBtn = document.getElementById("driverLogoutBtn");
+const refreshDriversBtn = document.getElementById("refreshDriversBtn");
+const driverSelectHint = document.getElementById("driverSelectHint");
 const driverAuthMain = document.getElementById("driverAuthMain");
 const driverLoginSection = document.getElementById("driverLoginSection");
 const driverAppSection = document.getElementById("driverAppSection");
@@ -14,14 +16,21 @@ const batchCountBadge = document.getElementById("batchCountBadge");
 const noRideCard = document.getElementById("noRideCard");
 
 let fallbackPollTimer = null;
+let driverListPollTimer = null;
 let currentDriverId = null;
 let currentBatch = null;
 
-loadDrivers();
+enhanceSelectField(driverSelect, "driver");
 warmUpServer();
+loadDrivers();
 setupSocket();
+startDriverListPoll();
+
 driverLoginBtn.addEventListener("click", loginDriver);
 driverLogoutBtn.addEventListener("click", logoutDriver);
+if (refreshDriversBtn) {
+    refreshDriversBtn.addEventListener("click", () => loadDrivers(true));
+}
 
 function setupSocket() {
     const s = connectSocket();
@@ -29,12 +38,13 @@ function setupSocket() {
 
     s.off("driver:updated");
     s.off("rides:updated");
+    s.off("drivers:updated");
 
     s.on("driver:updated", () => {
         if (currentDriverId && getDriverToken()) {
             refreshDriverView();
         } else {
-            refreshDriverSelect();
+            loadDrivers();
         }
     });
 
@@ -42,56 +52,106 @@ function setupSocket() {
         if (currentDriverId && getDriverToken()) {
             refreshDriverView();
         } else {
-            refreshDriverSelect();
+            loadDrivers();
+        }
+    });
+
+    s.on("drivers:updated", () => {
+        if (!currentDriverId || !getDriverToken()) {
+            loadDrivers();
         }
     });
 }
 
+function formatDriverStatus(status) {
+    if (status === "available") return "Available";
+    if (status === "busy") return "On a ride";
+    return String(status || "registered").replace(/_/g, " ");
+}
+
 function populateDriverSelect(drivers, selectedId) {
+    if (!driverSelect) return;
+
     const keepId = selectedId || driverSelect.value;
-    driverSelect.innerHTML = '<option value="">— Choose driver —</option>';
+    driverSelect.innerHTML = '<option value="">— Select your name —</option>';
+
     drivers.forEach((d) => {
         const opt = document.createElement("option");
-        opt.value = d.id;
-        opt.textContent = `${d.name} (${d.status})`;
+        opt.value = String(d.id);
+        opt.textContent = `${d.name} · ${formatDriverStatus(d.status)}`;
         driverSelect.appendChild(opt);
     });
-    if (keepId) {
+
+    if (keepId && drivers.some((d) => String(d.id) === String(keepId))) {
         driverSelect.value = String(keepId);
     }
-}
 
-async function refreshDriverSelect(selectedId) {
-    try {
-        const response = await fetch(`${API_BASE}/drivers`);
-        const drivers = await response.json();
-        if (!Array.isArray(drivers)) return;
-        populateDriverSelect(drivers, selectedId);
-    } catch (err) {
-        console.warn("Could not refresh driver list:", err);
+    if (driverSelectHint) {
+        if (!drivers.length) {
+            driverSelectHint.hidden = false;
+            driverSelectHint.textContent =
+                "No drivers listed yet. Ask campus operations to register you, then tap Refresh list.";
+        } else {
+            driverSelectHint.hidden = true;
+            driverSelectHint.textContent = "";
+        }
     }
 }
 
-async function loadDrivers() {
+async function loadDrivers(manualRefresh = false) {
+    if (refreshDriversBtn && manualRefresh) {
+        refreshDriversBtn.disabled = true;
+        refreshDriversBtn.textContent = "Refreshing…";
+    }
+
     try {
-        const response = await fetch(`${API_BASE}/drivers`);
-        const drivers = await response.json();
-        populateDriverSelect(drivers);
+        const drivers = await fetchDriverList();
+        populateDriverSelect(drivers, driverSelect ? driverSelect.value : null);
+
+        if (manualRefresh && drivers.length) {
+            setMessage("Driver list updated.");
+        }
 
         if (getDriverToken()) {
             const savedId = sessionStorage.getItem("kekeDriverId");
             if (savedId) {
                 currentDriverId = Number(savedId);
-                driverSelect.value = savedId;
+                if (driverSelect) driverSelect.value = savedId;
                 showDriverApp();
                 setupSocket();
                 joinDriverRoom(currentDriverId);
                 refreshDriverView();
                 startFallbackPoll();
+                stopDriverListPoll();
             }
         }
     } catch (err) {
-        setMessage("Could not load drivers. Please refresh the page and try again.");
+        if (driverSelectHint) {
+            driverSelectHint.hidden = false;
+            driverSelectHint.textContent = getFetchErrorMessage(err);
+        }
+        setMessage(getFetchErrorMessage(err));
+    } finally {
+        if (refreshDriversBtn) {
+            refreshDriversBtn.disabled = false;
+            refreshDriversBtn.textContent = "Refresh list";
+        }
+    }
+}
+
+function startDriverListPoll() {
+    if (driverListPollTimer) return;
+    driverListPollTimer = setInterval(() => {
+        if (!currentDriverId && !getDriverToken()) {
+            loadDrivers();
+        }
+    }, 12000);
+}
+
+function stopDriverListPoll() {
+    if (driverListPollTimer) {
+        clearInterval(driverListPollTimer);
+        driverListPollTimer = null;
     }
 }
 
@@ -105,12 +165,10 @@ async function loginDriver() {
     }
 
     try {
-        const response = await fetch(`${API_BASE}/auth/driver/login`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ driverId: Number(driverId), pin })
+        const { response, data } = await postJson("/auth/driver/login", {
+            driverId: Number(driverId),
+            pin
         });
-        const data = await response.json();
 
         if (!response.ok || data.error) {
             setMessage(data.error || "Login failed.");
@@ -127,8 +185,9 @@ async function loginDriver() {
         joinDriverRoom(currentDriverId);
         refreshDriverView();
         startFallbackPoll();
+        stopDriverListPoll();
     } catch (err) {
-        setMessage("Login failed. Check server connection.");
+        setMessage(getFetchErrorMessage(err));
     }
 }
 
@@ -138,9 +197,10 @@ function logoutDriver() {
     currentDriverId = null;
     currentBatch = null;
     if (fallbackPollTimer) clearInterval(fallbackPollTimer);
-    const lastDriverId = driverSelect.value;
+    const lastDriverId = driverSelect ? driverSelect.value : "";
     showLoginOnly();
-    refreshDriverSelect(lastDriverId);
+    loadDrivers();
+    startDriverListPoll();
     setMessage("Logged out.");
 }
 
@@ -168,18 +228,17 @@ async function refreshDriverView() {
     if (!currentDriverId || !getDriverToken()) return;
 
     try {
-        const [driversRes, batchRes] = await Promise.all([
-            fetch(`${API_BASE}/drivers`),
+        const [drivers, batchRes] = await Promise.all([
+            fetchDriverList(),
             authFetch(`/driver/${currentDriverId}/batch`, {}, "driver")
         ]);
 
-        const drivers = await driversRes.json();
-        const batch = await batchRes.json();
-        const me = drivers.find((d) => d.id === currentDriverId);
+        const batch = await parseJsonResponse(batchRes);
+        const me = drivers.find((d) => Number(d.id) === Number(currentDriverId));
 
         if (me) {
             if (driverDisplayName) driverDisplayName.textContent = me.name;
-            driverStatusLine.textContent = `${me.status.toUpperCase()} · ${me.phone}`;
+            driverStatusLine.textContent = `${formatDriverStatus(me.status).toUpperCase()} · ${me.phone}`;
         }
 
         currentBatch = batch;
@@ -189,7 +248,7 @@ async function refreshDriverView() {
             showNoBatch();
         }
     } catch (err) {
-        setMessage("Connection error. Retrying...");
+        setMessage(getFetchErrorMessage(err));
     }
 }
 
@@ -264,7 +323,7 @@ async function driverBatchAction(action, requestId) {
             { method: "POST" },
             "driver"
         );
-        const data = await response.json();
+        const data = await parseJsonResponse(response);
 
         if (!response.ok || data.error) {
             setMessage(data.error || "Action failed.");
@@ -274,7 +333,7 @@ async function driverBatchAction(action, requestId) {
         setMessage(data.message || "Done.");
         await refreshDriverView();
     } catch (err) {
-        setMessage("Action failed. Check connection.");
+        setMessage(getFetchErrorMessage(err));
     }
 }
 

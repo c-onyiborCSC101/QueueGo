@@ -24,6 +24,10 @@ function initRealtime(httpServer) {
     return io;
 }
 
+function emitDriversUpdated() {
+    if (io) io.emit("drivers:updated");
+}
+
 function emitRidesUpdated() {
     if (io) io.emit("rides:updated");
 }
@@ -67,5 +71,6 @@ module.exports = {
     emitRidesUpdated,
     emitRideStatus,
     emitDriverUpdated,
+    emitDriversUpdated,
     notifyRideChange
 };

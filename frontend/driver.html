@@ -40,8 +40,14 @@
                             <p>Drivers are added by operations staff. Your PIN is sent by SMS or shared in person.</p>
                         </div>
                         <div class="form-field">
-                            <label for="driverSelect">Your profile</label>
-                            <select id="driverSelect"><option value="">— Select your name —</option></select>
+                            <div class="form-field-row">
+                                <label for="driverSelect">Your profile</label>
+                                <button type="button" id="refreshDriversBtn" class="btn-link btn-link--driver">Refresh list</button>
+                            </div>
+                            <select id="driverSelect" class="app-select">
+                                <option value="">— Select your name —</option>
+                            </select>
+                            <p id="driverSelectHint" class="field-hint" hidden></p>
                         </div>
                         <div class="form-field">
                             <label for="driverPin">PIN</label>

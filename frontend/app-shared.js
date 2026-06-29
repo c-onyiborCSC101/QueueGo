@@ -75,6 +75,50 @@ function warmUpServer() {
     fetch(`${API_BASE}/health`, { method: "GET" }).catch(() => {});
 }
 
+function enhanceSelectField(selectEl, theme) {
+    if (!selectEl) return;
+
+    selectEl.classList.add("app-select");
+
+    if (selectEl.closest(".app-select-wrap")) {
+        return;
+    }
+
+    const wrap = document.createElement("div");
+    wrap.className = "app-select-wrap";
+
+    if (theme) {
+        wrap.classList.add(`app-select-wrap--${theme}`);
+    } else if (document.body.classList.contains("theme-driver")) {
+        wrap.classList.add("app-select-wrap--driver");
+    } else if (document.body.classList.contains("theme-passenger")) {
+        wrap.classList.add("app-select-wrap--passenger");
+    } else if (document.body.classList.contains("theme-admin")) {
+        wrap.classList.add("app-select-wrap--admin");
+    }
+
+    const parent = selectEl.parentNode;
+    if (parent) {
+        parent.insertBefore(wrap, selectEl);
+        wrap.appendChild(selectEl);
+    }
+}
+
+function initAppSelects(root = document) {
+    root.querySelectorAll("select:not(.app-select)").forEach((el) => enhanceSelectField(el));
+}
+
+async function fetchDriverList() {
+    const response = await fetchWithRetry(`${API_BASE}/drivers`);
+    const data = await parseJsonResponse(response);
+
+    if (!response.ok) {
+        throw new Error(data.error || CONNECTION_ERROR_MESSAGE);
+    }
+
+    return Array.isArray(data) ? data : [];
+}
+
 function ensureConfirmModal() {
     if (confirmModalReady) return;
 

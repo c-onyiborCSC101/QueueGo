@@ -322,19 +322,20 @@ async function loadHistory() {
 }
 
 async function loadDrivers() {
-    const response = await fetch(`${API_BASE}/drivers`);
-    const drivers = await response.json();
+    try {
+        const drivers = await fetchDriverList();
 
-    if (!Array.isArray(drivers)) return;
+        const countBadge = document.getElementById("driverCountBadge");
+        if (countBadge) {
+            countBadge.textContent = `${drivers.length} driver${drivers.length === 1 ? "" : "s"}`;
+        }
 
-    const countBadge = document.getElementById("driverCountBadge");
-    if (countBadge) {
-        countBadge.textContent = `${drivers.length} driver${drivers.length === 1 ? "" : "s"}`;
+        driverList.innerHTML = drivers.length
+            ? drivers.map(renderDriverCard).join("")
+            : "<p class='empty-note'>No drivers registered yet. Add one using the form below.</p>";
+    } catch (err) {
+        console.warn("Could not load drivers:", err);
     }
-
-    driverList.innerHTML = drivers.length
-        ? drivers.map(renderDriverCard).join("")
-        : "<p class='empty-note'>No drivers registered yet. Add one using the form below.</p>";
 }
 
 function renderPassengerCard(passenger, showActions) {

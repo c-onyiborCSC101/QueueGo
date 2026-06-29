@@ -37,4 +37,8 @@ function fillCampusLocationSelect(selectEl, emptyLabel) {
         opt.textContent = name;
         selectEl.appendChild(opt);
     });
+
+    if (typeof enhanceSelectField === "function") {
+        enhanceSelectField(selectEl, "passenger");
+    }
 }

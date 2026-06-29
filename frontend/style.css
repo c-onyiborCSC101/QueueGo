@@ -1306,17 +1306,163 @@ body:not(.dashboard-mode) #dashboardPanel {
     box-sizing: border-box;
     transition: border-color 0.15s, box-shadow 0.15s;
 }
+
+.form-field-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.form-field-row label {
+    margin: 0;
+}
+
+.field-hint {
+    margin: 6px 0 0;
+    font-size: 0.85em;
+    color: #64748b;
+    line-height: 1.45;
+}
+
+.btn-link {
+    border: none;
+    background: none;
+    padding: 0;
+    font-size: 0.85em;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+.btn-link--driver { color: #e65100; }
+.btn-link--passenger { color: #2e7d32; }
+.btn-link--admin { color: #0369a1; }
+.btn-link:hover { opacity: 0.85; }
+.btn-link:disabled { opacity: 0.5; cursor: wait; }
+
+.app-select-wrap {
+    position: relative;
+    width: 100%;
+}
+
+.app-select-wrap::after {
+    content: "";
+    position: absolute;
+    right: 16px;
+    top: 50%;
+    width: 10px;
+    height: 10px;
+    margin-top: -7px;
+    border-right: 2px solid #64748b;
+    border-bottom: 2px solid #64748b;
+    transform: rotate(45deg);
+    pointer-events: none;
+}
+
+.app-select {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    width: 100%;
+    padding: 12px 42px 12px 14px;
+    border: 1px solid #cbd5e1;
+    border-radius: 12px;
+    font-size: 1em;
+    font-weight: 500;
+    color: #0f172a;
+    background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+    box-sizing: border-box;
+    cursor: pointer;
+    transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+}
+
+.app-select:hover {
+    border-color: #94a3b8;
+    background: #fff;
+}
+
+.app-select:focus {
+    outline: none;
+    border-color: #0284c7;
+    box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
+    background: #fff;
+}
+
+.app-select-wrap--passenger .app-select {
+    border-color: #a5d6a7;
+    background: linear-gradient(180deg, #ffffff 0%, #f1f8f4 100%);
+}
+
+.app-select-wrap--passenger .app-select:focus {
+    border-color: #2e7d32;
+    box-shadow: 0 0 0 3px rgba(46, 125, 50, 0.15);
+}
+
+.app-select-wrap--passenger::after {
+    border-right-color: #2e7d32;
+    border-bottom-color: #2e7d32;
+}
+
+.app-select-wrap--driver .app-select {
+    border-color: #ffcc80;
+    background: linear-gradient(180deg, #ffffff 0%, #fff8f0 100%);
+}
+
+.app-select-wrap--driver .app-select:focus {
+    border-color: #e65100;
+    box-shadow: 0 0 0 3px rgba(230, 81, 0, 0.15);
+}
+
+.app-select-wrap--driver::after {
+    border-right-color: #e65100;
+    border-bottom-color: #e65100;
+}
+
+.app-select-wrap--admin .app-select {
+    border-color: #7dd3fc;
+    background: linear-gradient(180deg, #ffffff 0%, #f0f9ff 100%);
+}
+
+.app-select-wrap--admin .app-select:focus {
+    border-color: #0369a1;
+    box-shadow: 0 0 0 3px rgba(3, 105, 161, 0.15);
+}
+
+.app-select-wrap--admin::after {
+    border-right-color: #0369a1;
+    border-bottom-color: #0369a1;
+}
+
+.app-select option {
+    color: #0f172a;
+    background: #fff;
+    font-weight: 500;
+}
+
+.panel-card--passenger .app-select-wrap .app-select,
+.panel-card--passenger .form-field .app-select {
+    border-color: #a5d6a7;
+}
+
+.auth-form-card--driver .app-select-wrap .app-select {
+    border-color: #ffcc80;
+}
 .form-field input:focus,
 .form-field select:focus,
-.stacked-form input:focus {
+.stacked-form input:focus,
+.app-select:focus {
     outline: none;
     border-color: #0284c7;
     box-shadow: 0 0 0 3px rgba(2,132,199,0.15);
 }
 .auth-form-card--passenger .form-field input:focus,
-.auth-form-card--passenger .form-field select:focus { border-color: #2e7d32; box-shadow: 0 0 0 3px rgba(46,125,50,0.15); }
+.auth-form-card--passenger .form-field select:focus,
+.auth-form-card--passenger .app-select:focus { border-color: #2e7d32; box-shadow: 0 0 0 3px rgba(46,125,50,0.15); }
 .auth-form-card--driver .form-field input:focus,
-.auth-form-card--driver .form-field select:focus { border-color: #e65100; box-shadow: 0 0 0 3px rgba(230,81,0,0.15); }
+.auth-form-card--driver .form-field select:focus,
+.auth-form-card--driver .app-select:focus { border-color: #e65100; box-shadow: 0 0 0 3px rgba(230,81,0,0.15); }
 
 .btn-primary--block { display: block; text-align: center; text-decoration: none; }
 
