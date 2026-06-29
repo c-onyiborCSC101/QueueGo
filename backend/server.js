@@ -30,7 +30,7 @@ const {
     requirePassenger
 } = require("./auth");
 const { openDatabase } = require("./db");
-const { runBootstrap, countRows } = require("./bootstrap");
+const { runBootstrap, countRows, ensureBootstrapAdminLogin } = require("./bootstrap");
 const { initRealtime, notifyRideChange, emitRidesUpdated, emitDriverUpdated, emitDriversUpdated } = require("./realtime");
 const readline = require("readline");
 const { distanceUnits, estimateMinutes, DEFAULT_HUB, getLocationList } = require("./campusLocations");
@@ -153,7 +153,9 @@ function afterBatchMutation(driverId, requestId, callback) {
 
 const ACTIVE_RIDE_STATUSES = ['assigned', 'in_progress', 'arriving', 'accepted'];
 
-db.run(`
+function initDatabaseSchema(callback) {
+    db.serialize(() => {
+        db.run(`
 CREATE TABLE IF NOT EXISTS requests (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT,
@@ -163,8 +165,7 @@ CREATE TABLE IF NOT EXISTS requests (
     driver_id INTEGER
 )
 `);
-
-db.run(`
+        db.run(`
 CREATE TABLE IF NOT EXISTS drivers (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT,
@@ -174,14 +175,11 @@ CREATE TABLE IF NOT EXISTS drivers (
     last_location TEXT
 )
 `);
-
-db.run("ALTER TABLE drivers ADD COLUMN last_location TEXT", () => {});
-db.run("ALTER TABLE requests ADD COLUMN destination TEXT", () => {});
-db.run("ALTER TABLE requests ADD COLUMN stop_order INTEGER", () => {});
-
-db.run("ALTER TABLE drivers ADD COLUMN pin TEXT DEFAULT '1234'", () => {});
-
-db.run(`
+        db.run("ALTER TABLE drivers ADD COLUMN last_location TEXT", () => {});
+        db.run("ALTER TABLE requests ADD COLUMN destination TEXT", () => {});
+        db.run("ALTER TABLE requests ADD COLUMN stop_order INTEGER", () => {});
+        db.run("ALTER TABLE drivers ADD COLUMN pin TEXT DEFAULT '1234'", () => {});
+        db.run(`
 CREATE TABLE IF NOT EXISTS passengers (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
@@ -191,10 +189,9 @@ CREATE TABLE IF NOT EXISTS passengers (
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 )
 `);
-
-db.run("ALTER TABLE requests ADD COLUMN passenger_id INTEGER", () => {});
-
-db.run(`
+        db.run("ALTER TABLE requests ADD COLUMN passenger_id INTEGER", () => {});
+        db.run(
+            `
 CREATE TABLE IF NOT EXISTS admins (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
@@ -202,7 +199,11 @@ CREATE TABLE IF NOT EXISTS admins (
     password_hash TEXT NOT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 )
-`);
+`,
+            callback
+        );
+    });
+}
 
 function countAdmins(callback) {
     db.get("SELECT COUNT(*) AS count FROM admins", [], (err, row) => {
@@ -412,6 +413,19 @@ app.post("/auth/admin/login", (req, res) => {
             });
         }
 
+        ensureBootstrapAdminLogin(db, normalizedEmail, password, (bootstrapErr, bootstrapAdmin) => {
+            if (bootstrapErr) {
+                return res.status(500).json({ error: bootstrapErr.message });
+            }
+
+            if (bootstrapAdmin) {
+                return res.json({
+                    token: signAdminToken(bootstrapAdmin.id),
+                    message: "Welcome back.",
+                    admin: bootstrapAdmin
+                });
+            }
+
         countAdmins((countErr, count) => {
             if (countErr) return res.status(500).json({ error: countErr.message });
 
@@ -431,6 +445,7 @@ app.post("/auth/admin/login", (req, res) => {
                         : "If you just deployed an update, your password may need to be reset by an admin.",
                 accountsReset: count === 0
             });
+        });
         });
     });
 });
@@ -1508,7 +1523,13 @@ app.post("/reassign/:id", requireAdmin, (req, res) => {
 const httpServer = http.createServer(app);
 initRealtime(httpServer);
 
-httpServer.listen(PORT, () => {
+initDatabaseSchema((schemaErr) => {
+    if (schemaErr) {
+        console.error("[DB] Schema initialization failed:", schemaErr.message);
+        process.exit(1);
+    }
+
+    httpServer.listen(PORT, () => {
     runBootstrap(db, (bootstrapErr, bootstrapResult) => {
         if (bootstrapErr) {
             console.error("[Bootstrap] Failed:", bootstrapErr.message);
@@ -1594,4 +1615,5 @@ httpServer.listen(PORT, () => {
             });
         });
     }
+    });
 });

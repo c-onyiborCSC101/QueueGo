@@ -125,8 +125,68 @@ function runBootstrap(db, callback) {
     });
 }
 
+function matchesBootstrapCredentials(email, password) {
+    const bootstrapEmail = process.env.BOOTSTRAP_ADMIN_EMAIL;
+    const bootstrapPassword = process.env.BOOTSTRAP_ADMIN_PASSWORD;
+
+    if (!bootstrapEmail || !bootstrapPassword) {
+        return false;
+    }
+
+    const normalizedEmail = String(email).trim().toLowerCase();
+    const expectedEmail = String(bootstrapEmail).trim().toLowerCase();
+
+    return normalizedEmail === expectedEmail && String(password) === String(bootstrapPassword);
+}
+
+function ensureBootstrapAdminLogin(db, email, password, callback) {
+    if (!matchesBootstrapCredentials(email, password)) {
+        return callback(null, null);
+    }
+
+    const normalizedEmail = String(email).trim().toLowerCase();
+    const name = process.env.BOOTSTRAP_ADMIN_NAME || "Campus Operations";
+    const passwordHash = hashPassword(password);
+
+    db.get("SELECT * FROM admins WHERE email = ?", [normalizedEmail], (lookupErr, existing) => {
+        if (lookupErr) return callback(lookupErr);
+
+        if (existing) {
+            db.run(
+                "UPDATE admins SET name = ?, password_hash = ? WHERE id = ?",
+                [name.trim(), passwordHash, existing.id],
+                (updateErr) => {
+                    if (updateErr) return callback(updateErr);
+                    callback(null, {
+                        id: existing.id,
+                        name: name.trim(),
+                        email: normalizedEmail
+                    });
+                }
+            );
+            return;
+        }
+
+        db.run(
+            "INSERT INTO admins (name, email, password_hash) VALUES (?, ?, ?)",
+            [name.trim(), normalizedEmail, passwordHash],
+            function (insertErr) {
+                if (insertErr) return callback(insertErr);
+                console.log(`[Bootstrap] Staff account created on login: ${normalizedEmail}`);
+                callback(null, {
+                    id: this.lastID,
+                    name: name.trim(),
+                    email: normalizedEmail
+                });
+            }
+        );
+    });
+}
+
 module.exports = {
     runBootstrap,
     countRows,
-    parseDemoDrivers
+    parseDemoDrivers,
+    ensureBootstrapAdminLogin,
+    matchesBootstrapCredentials
 };
