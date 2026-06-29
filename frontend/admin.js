@@ -242,11 +242,7 @@ async function loadSmsStatus() {
         }
 
         if (data.provider === "console") {
-            smsStatusBanner.hidden = false;
-            smsStatusBanner.innerHTML = `
-                <h3>SMS demo mode</h3>
-                <p class="onboarding-note">Messages print in the server logs only. Set <code>SMS_PROVIDER=termii</code> on Render for real texts — see <code>SMS_SETUP.md</code>.</p>
-            `;
+            smsStatusBanner.hidden = true;
             return;
         }
 
